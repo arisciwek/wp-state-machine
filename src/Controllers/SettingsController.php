@@ -182,6 +182,11 @@ class SettingsController {
      * @return void
      */
     public function saveSettings() {
+        // Clean any output buffer to prevent HTML in JSON response
+        if (ob_get_length()) {
+            ob_clean();
+        }
+
         try {
             // Debug: log all POST data first
             error_log('=== SETTINGS SAVE AJAX CALLED ===');
@@ -248,7 +253,7 @@ class SettingsController {
 
             // Clear cache if cache settings changed
             if ($tab === 'cache') {
-                $this->cache->clearAllCache();
+                $this->cache->clearAll();
             }
 
             wp_send_json_success([
@@ -360,6 +365,11 @@ class SettingsController {
      * @return void
      */
     public function clearAllCache() {
+        // Clean any output buffer to prevent HTML in JSON response
+        if (ob_get_length()) {
+            ob_clean();
+        }
+
         try {
             // Verify nonce
             if (!check_ajax_referer('wp_state_machine_nonce', 'nonce', false)) {
@@ -372,7 +382,7 @@ class SettingsController {
             }
 
             // Clear cache
-            $this->cache->clearAllCache();
+            $this->cache->clearAll();
 
             wp_send_json_success([
                 'message' => __('All cache cleared successfully', 'wp-state-machine'),
@@ -391,6 +401,11 @@ class SettingsController {
      * @return void
      */
     public function cleanupOldLogs() {
+        // Clean any output buffer to prevent HTML in JSON response
+        if (ob_get_length()) {
+            ob_clean();
+        }
+
         try {
             // Verify nonce
             if (!check_ajax_referer('wp_state_machine_nonce', 'nonce', false)) {
@@ -436,6 +451,16 @@ class SettingsController {
      * @return void
      */
     public function getDatabaseStats() {
+        // Clean any output buffer to prevent HTML in JSON response
+        if (ob_get_length()) {
+            ob_clean();
+        }
+
+        // Suppress WordPress database errors for AJAX
+        global $wpdb;
+        $wpdb->suppress_errors = true;
+        $wpdb->hide_errors();
+
         try {
             // Verify nonce
             if (!check_ajax_referer('wp_state_machine_nonce', 'nonce', false)) {
@@ -447,15 +472,26 @@ class SettingsController {
                 throw new \Exception(__('Insufficient permissions', 'wp-state-machine'));
             }
 
-            global $wpdb;
+            // Check if tables exist first
+            $tables_exist = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM information_schema.TABLES
+                WHERE table_schema = %s
+                AND table_name = %s",
+                DB_NAME,
+                $wpdb->prefix . 'app_sm_machines'
+            ));
 
-            // Get table counts
+            if (!$tables_exist) {
+                throw new \Exception(__('State machine tables not found. Please activate the plugin first.', 'wp-state-machine'));
+            }
+
+            // Get table counts with error suppression
             $stats = [
-                'machines' => $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_sm_state_machines"),
-                'states' => $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_sm_states"),
-                'transitions' => $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_sm_transitions"),
-                'logs' => $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_sm_transition_logs"),
-                'workflow_groups' => $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_sm_workflow_groups"),
+                'machines' => (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_sm_machines"),
+                'states' => (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_sm_states"),
+                'transitions' => (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_sm_transitions"),
+                'logs' => (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_sm_transition_logs"),
+                'workflow_groups' => (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_sm_workflow_groups"),
             ];
 
             // Get database size
@@ -468,7 +504,7 @@ class SettingsController {
                 $wpdb->prefix . 'app_sm_%'
             ));
 
-            $stats['database_size_mb'] = $db_size ? $db_size : 0;
+            $stats['database_size_mb'] = $db_size ? (float) $db_size : 0;
 
             wp_send_json_success([
                 'stats' => $stats,
