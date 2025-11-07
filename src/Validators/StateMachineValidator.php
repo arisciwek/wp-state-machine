@@ -38,20 +38,45 @@ use WPStateMachine\Models\StateMachine\StateMachineModel;
 
 defined('ABSPATH') || exit;
 
-class StateMachineValidator {
+class StateMachineValidator extends AbstractStateMachineValidator {
     /**
      * State Machine Model instance
+     * Note: Also available as protected $model from parent class
      *
      * @var StateMachineModel
      */
-    private $model;
+    private $machine_model;
 
     /**
      * Constructor
      * Initializes model instance
+     * Parent constructor automatically calls getModel()
      */
     public function __construct() {
-        $this->model = new StateMachineModel();
+        parent::__construct();
+        $this->machine_model = $this->model;
+    }
+
+    // ========================================
+    // ABSTRACT METHOD IMPLEMENTATIONS
+    // ========================================
+
+    /**
+     * Get model instance for this validator
+     *
+     * @return StateMachineModel
+     */
+    protected function getModel() {
+        return new StateMachineModel();
+    }
+
+    /**
+     * Get capability prefix for permission checks
+     *
+     * @return string
+     */
+    protected function getCapabilityPrefix(): string {
+        return 'state_machines';
     }
 
     /**
@@ -135,129 +160,15 @@ class StateMachineValidator {
         return $errors;
     }
 
-    /**
-     * Validate user permission for operation
-     * Checks capability-based permissions
-     *
-     * @param int $machine_id State machine ID
-     * @param string $operation Operation type (view, update, delete)
-     * @return array ['allowed' => bool, 'message' => string]
-     */
-    public function validatePermission(int $machine_id, string $operation = 'view'): array {
-        // Get user relation
-        $relation = $this->getUserRelation($machine_id);
-
-        // Check permission based on operation
-        switch ($operation) {
-            case 'view':
-                $allowed = $relation['can_view'];
-                $message = $allowed ? '' : __('You do not have permission to view this state machine', 'wp-state-machine');
-                break;
-
-            case 'update':
-                $allowed = $relation['can_update'];
-                $message = $allowed ? '' : __('You do not have permission to update this state machine', 'wp-state-machine');
-                break;
-
-            case 'delete':
-                $allowed = $relation['can_delete'];
-                $message = $allowed ? '' : __('You do not have permission to delete this state machine', 'wp-state-machine');
-                break;
-
-            default:
-                $allowed = false;
-                $message = __('Invalid operation', 'wp-state-machine');
-                break;
-        }
-
-        return [
-            'allowed' => $allowed,
-            'message' => $message,
-            'relation' => $relation
-        ];
-    }
-
-    /**
-     * Get user's relation to state machine
-     * Returns permission flags and access type
-     *
-     * @param int $machine_id State machine ID
-     * @return array User relation data
-     */
-    public function getUserRelation(int $machine_id): array {
-        // Check if machine exists
-        $machine = $this->model->find($machine_id);
-        if (!$machine) {
-            return [
-                'exists' => false,
-                'is_admin' => false,
-                'can_view' => false,
-                'can_update' => false,
-                'can_delete' => false,
-                'access_type' => 'none'
-            ];
-        }
-
-        // Check user capabilities
-        $is_admin = current_user_can('manage_state_machines');
-        $can_view = current_user_can('view_state_machines');
-        $can_edit = current_user_can('edit_state_machines');
-        $can_delete = current_user_can('delete_state_machines');
-
-        // Determine access type
-        $access_type = 'none';
-        if ($is_admin) {
-            $access_type = 'admin';
-        } elseif ($can_edit) {
-            $access_type = 'editor';
-        } elseif ($can_view) {
-            $access_type = 'viewer';
-        }
-
-        // Build relation array
-        return [
-            'exists' => true,
-            'is_admin' => $is_admin,
-            'can_view' => $can_view || $is_admin,
-            'can_update' => $can_edit || $is_admin,
-            'can_delete' => $can_delete || $is_admin,
-            'access_type' => $access_type,
-            'machine' => $machine
-        ];
-    }
-
-    /**
-     * Check if user can view state machine
-     *
-     * @param int $machine_id State machine ID
-     * @return bool True if user can view
-     */
-    public function canView(int $machine_id): bool {
-        $relation = $this->getUserRelation($machine_id);
-        return $relation['can_view'];
-    }
-
-    /**
-     * Check if user can update state machine
-     *
-     * @param int $machine_id State machine ID
-     * @return bool True if user can update
-     */
-    public function canUpdate(int $machine_id): bool {
-        $relation = $this->getUserRelation($machine_id);
-        return $relation['can_update'];
-    }
-
-    /**
-     * Check if user can delete state machine
-     *
-     * @param int $machine_id State machine ID
-     * @return bool True if user can delete
-     */
-    public function canDelete(int $machine_id): bool {
-        $relation = $this->getUserRelation($machine_id);
-        return $relation['can_delete'];
-    }
+    // ========================================
+    // Permission methods inherited from AbstractStateMachineValidator:
+    // - validatePermission(int $id, string $operation): array
+    // - getUserRelation(int $id): array
+    // - canView(int $id): bool
+    // - canUpdate(int $id): bool
+    // - canDelete(int $id): bool
+    // - validateBulkOperation(array $ids, string $operation): array
+    // ========================================
 
     /**
      * Validate state machine data structure
@@ -300,22 +211,5 @@ class StateMachineValidator {
         return $errors;
     }
 
-    /**
-     * Validate bulk operation
-     * Used for batch operations on multiple state machines
-     *
-     * @param array $machine_ids Array of state machine IDs
-     * @param string $operation Operation type
-     * @return array Results for each machine
-     */
-    public function validateBulkOperation(array $machine_ids, string $operation): array {
-        $results = [];
-
-        foreach ($machine_ids as $machine_id) {
-            $validation = $this->validatePermission($machine_id, $operation);
-            $results[$machine_id] = $validation;
-        }
-
-        return $results;
-    }
+    // validateBulkOperation() inherited from AbstractStateMachineValidator
 }

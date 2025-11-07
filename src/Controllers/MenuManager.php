@@ -54,19 +54,38 @@ class MenuManager {
     private $state_machine_controller;
 
     /**
+     * State controller instance
+     *
+     * @var StateController
+     */
+    private $state_controller;
+
+    /**
+     * Transition controller instance
+     *
+     * @var TransitionController
+     */
+    private $transition_controller;
+
+    /**
      * Constructor
      *
      * @param string $plugin_name Plugin name
      * @param string $version Plugin version
+     * @param StateMachineController|null $state_machine_controller State machine controller instance
+     * @param StateController|null $state_controller State controller instance
+     * @param TransitionController|null $transition_controller Transition controller instance
      */
-    public function __construct($plugin_name, $version) {
+    public function __construct($plugin_name, $version, $state_machine_controller = null, $state_controller = null, $transition_controller = null) {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
+        $this->state_machine_controller = $state_machine_controller;
+        $this->state_controller = $state_controller;
+        $this->transition_controller = $transition_controller;
 
         // Initialize controllers when they are created
         // For now, we'll use placeholder callbacks
         // $this->settings_controller = new SettingsController();
-        // $this->state_machine_controller = new StateMachineController();
     }
 
     /**
@@ -121,6 +140,26 @@ class MenuManager {
             [$this, 'renderMainPage']
         );
 
+        // Submenu: States
+        add_submenu_page(
+            'wp-state-machine',
+            __('States', 'wp-state-machine'),
+            __('States', 'wp-state-machine'),
+            'view_state_machines',
+            'wp-state-machine-states',
+            [$this, 'renderStatesPage']
+        );
+
+        // Submenu: Transitions
+        add_submenu_page(
+            'wp-state-machine',
+            __('Transitions', 'wp-state-machine'),
+            __('Transitions', 'wp-state-machine'),
+            'view_state_machines',
+            'wp-state-machine-transitions',
+            [$this, 'renderTransitionsPage']
+        );
+
         // Submenu: Transition Logs
         add_submenu_page(
             'wp-state-machine',
@@ -151,13 +190,67 @@ class MenuManager {
      * @return void
      */
     public function renderMainPage() {
+        // If we have a controller instance, use it
+        if ($this->state_machine_controller) {
+            $this->state_machine_controller->renderMainPage();
+            return;
+        }
+
+        // Fallback to placeholder if controller not injected
         echo '<div class="wrap">';
         echo '<h1>' . esc_html__('State Machines', 'wp-state-machine') . '</h1>';
         echo '<p>' . esc_html__('Manage your workflow state machines.', 'wp-state-machine') . '</p>';
 
-        // TODO: Implement state machine list/management
         echo '<div class="notice notice-info">';
         echo '<p>' . esc_html__('State machine management interface will be implemented here.', 'wp-state-machine') . '</p>';
+        echo '</div>';
+
+        echo '</div>';
+    }
+
+    /**
+     * Render States page
+     *
+     * @return void
+     */
+    public function renderStatesPage() {
+        // If we have a controller instance, use it
+        if ($this->state_controller) {
+            $this->state_controller->renderMainPage();
+            return;
+        }
+
+        // Fallback to placeholder if controller not injected
+        echo '<div class="wrap">';
+        echo '<h1>' . esc_html__('States', 'wp-state-machine') . '</h1>';
+        echo '<p>' . esc_html__('Manage state machine states.', 'wp-state-machine') . '</p>';
+
+        echo '<div class="notice notice-info">';
+        echo '<p>' . esc_html__('State management interface will be implemented here.', 'wp-state-machine') . '</p>';
+        echo '</div>';
+
+        echo '</div>';
+    }
+
+    /**
+     * Render Transitions page
+     *
+     * @return void
+     */
+    public function renderTransitionsPage() {
+        // If we have a controller instance, use it
+        if ($this->transition_controller) {
+            $this->transition_controller->renderMainPage();
+            return;
+        }
+
+        // Fallback to placeholder if controller not injected
+        echo '<div class="wrap">';
+        echo '<h1>' . esc_html__('Transitions', 'wp-state-machine') . '</h1>';
+        echo '<p>' . esc_html__('Manage state machine transitions.', 'wp-state-machine') . '</p>';
+
+        echo '<div class="notice notice-info">';
+        echo '<p>' . esc_html__('Transition management interface will be implemented here.', 'wp-state-machine') . '</p>';
         echo '</div>';
 
         echo '</div>';
