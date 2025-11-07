@@ -53,13 +53,6 @@ defined('ABSPATH') || exit;
         <input type="hidden" name="nonce" id="settings-nonce" value="<?php echo esc_attr($nonce); ?>">
         <input type="hidden" name="active_tab" id="active-tab" value="general">
 
-        <!-- Debug: show nonce value -->
-        <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
-        <div style="background:#fff3cd;padding:5px;margin:10px 0;font-size:11px;">
-            Debug - Nonce: <code><?php echo esc_html($nonce); ?></code>
-        </div>
-        <?php endif; ?>
-
         <!-- General Tab -->
         <div id="general" class="sm-settings-tab active">
             <div class="sm-settings-section">
