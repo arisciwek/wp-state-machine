@@ -193,28 +193,102 @@ do_action('wp_state_machine_transition_failed', $entity, $transition, $error);
 
 ## FASE 3: EXTRAS (Nice to Have)
 
-### PRIORITAS #6: Logs Viewer
+### ⭐ PRIORITAS #6: Logs Viewer
 **Effort:** 2-3 jam
-**Status:** PENDING
+**Status:** ✅ COMPLETED
+**Dependency:** Butuh TransitionLogModel exists (#5)
+**Impact:** View dan audit transition history
 
 **Tasks:**
-- [ ] Create LogsController.php
-- [ ] Display transition logs dengan filtering
-- [ ] Show: machine, from_state, to_state, user, timestamp
-- [ ] Add search & date range filter
-- [ ] Update MenuManager->renderLogsPage()
+- [x] Create LogsController.php (standalone controller)
+- [x] Display transition logs dengan filtering (plugin, machine, date range)
+- [x] Show: machine, from_state, to_state, user, timestamp, comment
+- [x] Add search & date range filter
+- [x] Update MenuManager->renderLogsPage()
+- [x] Create transition-logs-view.php (clean view, no inline CSS/JS)
+- [x] Extract CSS to /assets/css/transition-logs.css
+- [x] Extract JS to /assets/js/transition-logs.js
+- [x] Implement CSV export functionality
+- [x] Add plugin filtering support (per-plugin tables)
+- [x] Move asset enqueuing to class-dependencies.php
+
+**Special Features:**
+- DataTables server-side processing
+- Multi-plugin support (queries per-plugin tables + central table)
+- Export to CSV with filters applied
+- Permission checks (view_state_machine_logs)
+- Real-time filter status display
+
+**Files Created:**
+- `/src/Controllers/LogsController.php` (v1.0.1)
+- `/src/Views/admin/logs/transition-logs-view.php` (v1.0.1)
+- `/assets/css/transition-logs.css`
+- `/assets/js/transition-logs.js`
+
+**Files Updated:**
+- `/includes/class-dependencies.php` (v1.0.1) - Added logs assets enqueuing
+- `/src/Controllers/MenuManager.php` - Added LogsController injection
+- `/wp-state-machine.php` - Instantiate LogsController
+
+**Result:** Complete logs viewer dengan filtering, search, dan export
 
 ---
 
-### PRIORITAS #7: Workflow Groups Controller
+### ⭐ PRIORITAS #7: Workflow Groups Controller
 **Effort:** 2-3 jam
-**Status:** PENDING
+**Status:** ✅ COMPLETED
+**Dependency:** FASE 1 & 2 Complete
+**Impact:** Organize state machines into logical groups
 
 **Tasks:**
-- [ ] Create WorkflowGroupController.php
-- [ ] CRUD operations untuk groups
-- [ ] Assign machines to groups
-- [ ] Update MenuManager->renderGroupsPage()
+- [x] Create WorkflowGroupModel.php extending AbstractStateMachineModel
+- [x] Create WorkflowGroupValidator.php extending AbstractStateMachineValidator
+- [x] Create WorkflowGroupController.php (CRUD operations)
+- [x] Create workflow-groups-view.php (clean view, no inline CSS/JS)
+- [x] Extract CSS to /assets/css/workflow-groups.css
+- [x] Extract JS to /assets/js/workflow-groups.js
+- [x] Update MenuManager->renderGroupsPage()
+- [x] Update wp-state-machine.php to instantiate controller
+- [x] Move asset enqueuing to class-dependencies.php
+- [x] Add sort order management
+- [x] Add machine count tracking
+
+**Special Features:**
+- DataTables server-side processing
+- Add/Edit/Delete groups via modals
+- View group details with assigned machines
+- Active/Inactive status toggle
+- Dashicon selector for group icons
+- Sort order management (ready for drag-drop)
+- Machine count badges
+- Comprehensive validation
+- Permission checks (workflow_groups capabilities)
+- Auto-slug generation from name
+
+**Files Created:**
+- `/src/Models/WorkflowGroup/WorkflowGroupModel.php` (v1.0.0)
+- `/src/Validators/WorkflowGroupValidator.php` (v1.0.0)
+- `/src/Controllers/WorkflowGroupController.php` (v1.0.0)
+- `/src/Views/admin/workflow-groups/workflow-groups-view.php` (v1.0.0)
+- `/assets/css/workflow-groups.css` (v1.0.0)
+- `/assets/js/workflow-groups.js` (v1.0.0)
+- `/examples/blog-post-workflow.yml` (sampler - educational)
+- `/examples/support-ticket-workflow.yml` (sampler - comprehensive)
+- `/examples/order-state-machine.yml` (sampler - e-commerce)
+
+**Files Updated:**
+- `/includes/class-dependencies.php` (v1.0.2) - Added workflow groups assets
+- `/src/Controllers/MenuManager.php` - Added WorkflowGroupController injection
+- `/wp-state-machine.php` - Instantiate WorkflowGroupController
+
+**Architecture Notes:**
+- NO new abstractions needed (existing abstractions sufficient)
+- Model extends AbstractStateMachineModel
+- Validator extends AbstractStateMachineValidator
+- Controller follows StateMachineController pattern
+- Centralized feature (one controller for all plugins)
+
+**Result:** Complete workflow groups management dengan CRUD, filtering, dan machine tracking
 
 ---
 
@@ -306,17 +380,27 @@ FASE 3 (Parallel):
 - ✅ PRIORITAS #5: StateMachineEngine (Core execution engine with guards, logging, hooks)
 - ✅ TransitionLogModel (Audit trail and history tracking)
 - ✅ **FASE 2 COMPLETE: Execution (Run State Machines)**
+- ✅ PRIORITAS #6: Logs Viewer (LogsController with DataTables, filtering, export)
+- ✅ **TODO-6104:** Per-Plugin Log Tables Implementation
+- ✅ PRIORITAS #7: Workflow Groups Controller (Complete groups management)
+- ✅ **FASE 3 EXTRAS:** Partially Complete (2 of 3 done)
+
+**Bonus Deliverables:**
+- ✅ 3x YML Workflow Samplers (blog-post, support-ticket, order)
+- ✅ Clean MVC architecture dengan separated assets
+- ✅ Centralized asset management (class-dependencies.php)
 
 **In Progress:**
 - None
 
 **Next Step:**
-- **RECOMMENDED:** Continue to FASE 3 (PRIORITAS #6: Logs Viewer)
-  - Create LogsController for viewing transition history
-  - Build admin UI for logs with filtering
-  - Display machine, state, user, timestamp data
-- **ALTERNATIVE:** Start integration testing with wp-rfq example
-- **ALTERNATIVE:** Begin documentation updates
+- **RECOMMENDED:** Continue to PRIORITAS #8: Settings Controller
+  - Create SettingsController for plugin configuration
+  - Build admin UI for settings management
+  - General settings, permissions, cache options
+- **ALTERNATIVE:** Start integration testing with existing features
+- **ALTERNATIVE:** Create plugin integration examples
+- **ALTERNATIVE:** Begin comprehensive documentation
 
 ---
 
@@ -340,6 +424,7 @@ FASE 3 (Parallel):
 - StateMachineController: `/src/Controllers/StateMachineController.php`
 - StateController: `/src/Controllers/StateController.php`
 - TransitionController: `/src/Controllers/TransitionController.php`
+- LogsController: `/src/Controllers/LogsController.php` (v1.0.1)
 
 ### Implemented Validators:
 - StateMachineValidator: `/src/Validators/StateMachineValidator.php`
@@ -356,6 +441,7 @@ FASE 3 (Parallel):
 - Machines: `/src/Views/admin/state-machines/index.php`
 - States: `/src/Views/admin/states/index.php`
 - Transitions: `/src/Views/admin/transitions/index.php`
+- Logs: `/src/Views/admin/logs/transition-logs-view.php` (v1.0.1)
 
 ### Engine:
 - StateMachineEngine: `/src/Engine/StateMachineEngine.php`

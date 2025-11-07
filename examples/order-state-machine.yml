@@ -1,0 +1,424 @@
+# Order State Machine Definition (Sample/Template)
+# This is a simplified example showing how to define a state machine for an e-commerce order workflow
+# Use this as a template for creating your own state machines
+#
+# Author: WPPM Development Team
+# Version: 1.0.0
+# Last Modified: 2025-11-07
+
+# ====================
+# BASIC METADATA
+# ====================
+
+id: order_workflow
+label: Order Workflow
+entity_type: order
+field_name: order_status
+description: Manages e-commerce order lifecycle from cart to delivery
+
+# Initial state when order is created
+initial_state: pending
+
+# ====================
+# WORKFLOW GROUP (Optional)
+# ====================
+
+workflow_group: e-commerce
+
+# ====================
+# STATE DEFINITIONS
+# ====================
+
+states:
+  # Initial state - order just created
+  pending:
+    label: Pending Payment
+    description: Order created, awaiting payment confirmation
+    weight: 0
+    color: '#ffc107'  # Yellow/Warning
+    icon: 'clock'
+    is_initial: true
+    permissions:
+      view: ['administrator', 'shop_manager', 'customer_owner']
+      edit: ['administrator', 'shop_manager']
+
+  # Payment received
+  processing:
+    label: Processing
+    description: Payment confirmed, preparing order for shipment
+    weight: 10
+    color: '#17a2b8'  # Blue/Info
+    icon: 'gear'
+    permissions:
+      view: ['administrator', 'shop_manager', 'staff', 'customer_owner']
+      edit: ['administrator', 'shop_manager', 'staff']
+
+  # Order packed and ready
+  ready_to_ship:
+    label: Ready to Ship
+    description: Order is packed and ready for pickup/delivery
+    weight: 20
+    color: '#20c997'  # Teal
+    icon: 'box-seam'
+    permissions:
+      view: ['administrator', 'shop_manager', 'staff', 'customer_owner']
+      edit: ['administrator', 'shop_manager', 'staff']
+
+  # Out for delivery
+  shipped:
+    label: Shipped
+    description: Order has been shipped to customer
+    weight: 30
+    color: '#28a745'  # Green
+    icon: 'truck'
+    permissions:
+      view: ['administrator', 'shop_manager', 'staff', 'customer_owner']
+      edit: ['administrator', 'shop_manager']
+
+  # Successfully delivered
+  completed:
+    label: Completed
+    description: Order delivered and transaction complete
+    weight: 40
+    color: '#007bff'  # Blue
+    icon: 'check-circle-fill'
+    permissions:
+      view: ['administrator', 'shop_manager', 'customer_owner']
+      edit: []  # No editing once completed
+
+  # Order cancelled
+  cancelled:
+    label: Cancelled
+    description: Order cancelled by customer or admin
+    weight: 50
+    color: '#6c757d'  # Gray
+    icon: 'x-circle'
+    permissions:
+      view: ['administrator', 'shop_manager', 'customer_owner']
+      edit: ['administrator', 'shop_manager']
+
+  # Order failed/rejected
+  failed:
+    label: Failed
+    description: Payment failed or order could not be processed
+    weight: 60
+    color: '#dc3545'  # Red
+    icon: 'exclamation-triangle'
+    permissions:
+      view: ['administrator', 'shop_manager', 'customer_owner']
+      edit: ['administrator', 'shop_manager']
+
+  # Refund initiated
+  refunded:
+    label: Refunded
+    description: Order refunded to customer
+    weight: 70
+    color: '#fd7e14'  # Orange
+    icon: 'arrow-counterclockwise'
+    permissions:
+      view: ['administrator', 'shop_manager', 'customer_owner']
+      edit: ['administrator']
+
+# ====================
+# TRANSITION DEFINITIONS
+# ====================
+
+transitions:
+
+  # Confirm payment and start processing
+  confirm_payment:
+    label: Confirm Payment
+    description: Payment received, begin order processing
+    from: ['pending']
+    to: processing
+    weight: 10
+    permissions: ['administrator', 'shop_manager', 'system']
+    hooks:
+      before: ['validate_payment']
+      after: ['send_confirmation_email', 'update_inventory', 'assign_to_warehouse']
+    metadata_required:
+      - payment_method
+      - payment_id
+      - payment_amount
+
+  # Mark order ready for shipment
+  mark_ready:
+    label: Mark Ready to Ship
+    description: Order is packed and ready for pickup
+    from: ['processing']
+    to: ready_to_ship
+    weight: 20
+    permissions: ['administrator', 'shop_manager', 'staff']
+    hooks:
+      before: ['validate_items_packed']
+      after: ['notify_shipping_team', 'generate_shipping_label']
+    metadata_required:
+      - packed_by
+      - package_weight
+
+  # Ship order to customer
+  ship_order:
+    label: Ship Order
+    description: Order dispatched to customer
+    from: ['ready_to_ship']
+    to: shipped
+    weight: 30
+    permissions: ['administrator', 'shop_manager', 'staff']
+    hooks:
+      before: ['validate_shipping_info']
+      after: ['send_tracking_email', 'update_shipping_status']
+    metadata_required:
+      - tracking_number
+      - carrier
+      - shipped_by
+
+  # Mark order as completed
+  mark_completed:
+    label: Mark as Completed
+    description: Order successfully delivered
+    from: ['shipped']
+    to: completed
+    weight: 40
+    permissions: ['administrator', 'shop_manager', 'system']
+    hooks:
+      before: ['validate_delivery_confirmation']
+      after: ['send_feedback_request', 'update_customer_stats', 'log_completion']
+    automation:
+      trigger_event: 'delivery_confirmed'
+      trigger_plugin: 'wp-shipping'
+
+  # Cancel order
+  cancel_order:
+    label: Cancel Order
+    description: Cancel order and process refund if needed
+    from: ['pending', 'processing', 'ready_to_ship']
+    to: cancelled
+    weight: 50
+    permissions: ['administrator', 'shop_manager', 'customer']
+    hooks:
+      before: ['validate_cancellation_allowed', 'check_refund_eligibility']
+      after: ['process_refund', 'restore_inventory', 'send_cancellation_email']
+    metadata_required:
+      - cancellation_reason
+      - cancelled_by
+
+  # Mark order as failed
+  mark_failed:
+    label: Mark as Failed
+    description: Order processing failed
+    from: ['pending', 'processing']
+    to: failed
+    weight: 60
+    permissions: ['administrator', 'shop_manager', 'system']
+    hooks:
+      before: ['log_failure_reason']
+      after: ['notify_customer', 'restore_inventory', 'log_failure']
+    metadata_required:
+      - failure_reason
+      - failure_type
+
+  # Process refund
+  process_refund:
+    label: Process Refund
+    description: Refund order amount to customer
+    from: ['completed', 'shipped', 'cancelled']
+    to: refunded
+    weight: 70
+    permissions: ['administrator', 'shop_manager']
+    hooks:
+      before: ['validate_refund_amount', 'validate_payment_gateway']
+      after: ['send_refund_confirmation', 'update_accounting']
+    metadata_required:
+      - refund_amount
+      - refund_reason
+      - refund_method
+
+# ====================
+# WORKFLOW HOOKS
+# ====================
+
+workflow_hooks:
+  on_payment_confirmed:
+    - action: send_notification
+      params:
+        recipients: ['customer', 'warehouse']
+        template: order_confirmed
+    - action: update_inventory
+      params:
+        action: reserve_stock
+
+  on_shipped:
+    - action: send_notification
+      params:
+        recipients: ['customer']
+        template: order_shipped
+        include_tracking: true
+    - action: schedule_delivery_check
+      params:
+        check_after_days: 3
+
+  on_completed:
+    - action: request_review
+      params:
+        delay_days: 2
+    - action: update_customer_metrics
+      params:
+        completed_orders: +1
+
+# ====================
+# VALIDATION RULES
+# ====================
+
+validation:
+  confirm_payment:
+    - rule: payment_amount_matches
+      message: Payment amount must match order total
+    - rule: payment_verified
+      message: Payment must be verified by payment gateway
+
+  ship_order:
+    - rule: has_valid_address
+      message: Valid shipping address required
+    - rule: has_tracking_number
+      message: Tracking number is required
+
+# ====================
+# BUSINESS RULES
+# ====================
+
+business_rules:
+  pending:
+    - Payment must be confirmed within 24 hours
+    - Auto-cancel if no payment after 48 hours
+    - Send payment reminder after 12 hours
+
+  processing:
+    - Target processing time: 1-2 business days
+    - Send status update to customer daily
+    - Escalate if processing exceeds 3 days
+
+  shipped:
+    - Track delivery status automatically
+    - Send tracking updates to customer
+    - Mark completed after delivery confirmation
+
+  completed:
+    - Archive order after 90 days
+    - Generate sales reports
+    - Include in customer lifetime value
+
+# ====================
+# PERMISSIONS MATRIX
+# ====================
+
+permissions:
+  view_state:
+    administrator: ['*']
+    shop_manager: ['*']
+    staff: ['pending', 'processing', 'ready_to_ship', 'shipped']
+    customer: ['pending', 'processing', 'ready_to_ship', 'shipped', 'completed', 'cancelled', 'refunded']
+
+  trigger_transition:
+    administrator: ['*']
+    shop_manager: ['confirm_payment', 'mark_ready', 'ship_order', 'mark_completed', 'cancel_order', 'process_refund']
+    staff: ['mark_ready', 'ship_order']
+    customer: ['cancel_order']
+    system: ['confirm_payment', 'mark_completed', 'mark_failed']
+
+# ====================
+# NOTIFICATIONS
+# ====================
+
+notifications:
+  order_confirmed:
+    recipients: ['customer']
+    urgency: medium
+    channels: ['email', 'sms']
+    subject: Order Confirmed - #{order_number}
+    template: |
+      Thank you for your order!
+
+      Order Number: {order_number}
+      Total: {order_total}
+
+      We'll notify you when your order ships.
+
+  order_shipped:
+    recipients: ['customer']
+    urgency: medium
+    channels: ['email', 'sms']
+    subject: Your Order Has Shipped!
+    template: |
+      Your order {order_number} has been shipped.
+
+      Tracking Number: {tracking_number}
+      Carrier: {carrier}
+      Expected Delivery: {expected_delivery}
+
+      Track your order: {tracking_url}
+
+# ====================
+# DATABASE CONFIGURATION
+# ====================
+
+database:
+  table: wp_app_orders
+  state_field: order_status
+
+  additional_fields:
+    order_number:
+      type: varchar(50)
+      description: Unique order reference
+    customer_id:
+      type: bigint
+      description: Customer who placed the order
+    order_total:
+      type: decimal(10,2)
+      description: Total order amount
+    payment_method:
+      type: varchar(50)
+      description: Payment method used
+    tracking_number:
+      type: varchar(100)
+      description: Shipping tracking number
+
+  # Log table for state transitions
+  audit_table: wp_app_order_state_history
+  audit_fields:
+    - id
+    - order_id
+    - from_state
+    - to_state
+    - transition
+    - triggered_by_user_id
+    - triggered_at
+    - metadata (JSON)
+
+# ====================
+# METADATA
+# ====================
+
+version: '1.0.0'
+last_modified: '2025-11-07'
+author: 'WPPM Development Team'
+plugin: 'wp-state-machine'  # This is the sample, actual implementations should reference their own plugin
+license: 'GPL v2 or later'
+
+# ====================
+# USAGE NOTES
+# ====================
+
+notes: |
+  This is a sample state machine definition for educational purposes.
+
+  To use this in your plugin:
+  1. Copy this file to your plugin's config directory
+  2. Modify the states and transitions to match your workflow
+  3. Update the database table and field names
+  4. Implement the hooks referenced in transitions
+  5. Customize permissions to match your user roles
+  6. Update notifications with your branding
+
+  For more information, see:
+  - Documentation: /wp-docs/06-state-machines/
+  - Integration Example: /examples/plugin-integration-example.php

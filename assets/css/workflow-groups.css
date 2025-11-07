@@ -1,0 +1,172 @@
+/**
+ * Workflow Groups Admin Styles
+ *
+ * @package     WP_State_Machine
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Path: /assets/css/workflow-groups.css
+ *
+ * Description: Styles for workflow groups admin interface.
+ *              Minimal styling, mostly relies on WP Admin styles.
+ *
+ * Changelog:
+ * 1.0.0 - 2025-11-07 (TODO-6102 PRIORITAS #7)
+ * - Initial creation
+ * - Modal and form styles
+ * - Status badge styles
+ */
+
+/* Modal Styles */
+.sm-modal {
+    display: none;
+    position: fixed;
+    z-index: 100000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.sm-modal-content {
+    background-color: #fff;
+    margin: 5% auto;
+    padding: 0;
+    border: 1px solid #ccd0d4;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.sm-modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #dcdcde;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sm-modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.sm-modal-close {
+    background: transparent;
+    border: none;
+    font-size: 28px;
+    font-weight: bold;
+    color: #646970;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    line-height: 1;
+}
+
+.sm-modal-close:hover {
+    color: #000;
+}
+
+.sm-modal-body {
+    padding: 20px;
+}
+
+.sm-modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #dcdcde;
+    text-align: right;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* Form Styles */
+.sm-form-row {
+    margin-bottom: 20px;
+}
+
+.sm-form-row label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.sm-form-row .required {
+    color: #d63638;
+}
+
+.sm-form-row .description {
+    font-size: 12px;
+    color: #646970;
+    font-style: italic;
+    margin-top: 5px;
+    margin-bottom: 0;
+}
+
+.error-message {
+    color: #d63638;
+    font-size: 12px;
+    display: none;
+    margin-top: 5px;
+}
+
+.error-message.active {
+    display: block;
+}
+
+/* Status Badge */
+.sm-status-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.sm-status-badge.active {
+    background: #00a32a;
+    color: #fff;
+}
+
+.sm-status-badge.inactive {
+    background: #646970;
+    color: #fff;
+}
+
+/* Action Buttons */
+.sm-action-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+/* Machine Count Badge */
+.sm-machine-count {
+    display: inline-block;
+    background: #2271b1;
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.sm-machine-count.zero {
+    background: #dcdcde;
+    color: #646970;
+}
+
+/* Icon Preview */
+.dashicons-preview {
+    font-size: 24px;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
+/* Loading Overlay */
+.sm-loading {
+    position: relative;
+    opacity: 0.6;
+    pointer-events: none;
+}

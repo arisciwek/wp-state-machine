@@ -1,0 +1,781 @@
+# Support Ticket State Machine
+#
+# Comprehensive example showing customer support ticket lifecycle
+# Demonstrates: multiple states, branching, escalation, SLA tracking
+#
+# Author: arisciwek
+# Version: 1.0.0
+# Last Modified: 2025-11-07
+# License: GPL v2 or later
+
+# ====================
+# BASIC METADATA
+# ====================
+
+id: support_ticket_workflow
+label: Support Ticket Lifecycle
+entity_type: ticket
+field_name: ticket_status
+description: Complete workflow for customer support ticket management from creation to resolution
+
+initial_state: new
+
+workflow_group: customer-support
+
+# ====================
+# STATE DEFINITIONS
+# 8 states covering full ticket lifecycle
+# ====================
+
+states:
+
+  new:
+    label: New
+    description: Ticket just created, not yet assigned
+    weight: 0
+    color: '#17a2b8'  # Blue - needs attention
+    icon: 'envelope-exclamation'
+    is_initial: true
+    permissions:
+      view: ['administrator', 'support_manager', 'support_agent']
+      edit: ['administrator', 'support_manager']
+    sla:
+      response_time: '2 hours'
+      resolution_time: '24 hours'
+
+  assigned:
+    label: Assigned
+    description: Ticket assigned to support agent
+    weight: 10
+    color: '#ffc107'  # Yellow - in queue
+    icon: 'person-check'
+    permissions:
+      view: ['administrator', 'support_manager', 'support_agent', 'ticket_owner']
+      edit: ['administrator', 'support_manager', 'assigned_agent']
+    sla:
+      first_response: '1 hour'
+      resolution_time: '24 hours'
+
+  in_progress:
+    label: In Progress
+    description: Agent is actively working on the ticket
+    weight: 20
+    color: '#fd7e14'  # Orange - active work
+    icon: 'tools'
+    permissions:
+      view: ['administrator', 'support_manager', 'support_agent', 'ticket_owner']
+      edit: ['administrator', 'support_manager', 'assigned_agent']
+    sla:
+      resolution_time: '24 hours'
+      update_frequency: '4 hours'
+
+  waiting_customer:
+    label: Waiting for Customer
+    description: Awaiting response or information from customer
+    weight: 30
+    color: '#20c997'  # Teal - paused
+    icon: 'clock-history'
+    permissions:
+      view: ['administrator', 'support_manager', 'support_agent', 'ticket_owner']
+      edit: ['administrator', 'support_manager', 'assigned_agent', 'ticket_owner']
+    sla:
+      customer_response: '48 hours'
+      auto_close_after: '7 days'
+
+  escalated:
+    label: Escalated
+    description: Ticket escalated to senior support or management
+    weight: 40
+    color: '#dc3545'  # Red - urgent
+    icon: 'exclamation-triangle'
+    permissions:
+      view: ['administrator', 'support_manager', 'support_agent', 'ticket_owner']
+      edit: ['administrator', 'support_manager']
+    sla:
+      response_time: '30 minutes'
+      resolution_time: '4 hours'
+
+  resolved:
+    label: Resolved
+    description: Issue resolved, awaiting customer confirmation
+    weight: 50
+    color: '#28a745'  # Green - solution provided
+    icon: 'check-circle'
+    permissions:
+      view: ['administrator', 'support_manager', 'support_agent', 'ticket_owner']
+      edit: ['administrator', 'support_manager']
+    sla:
+      auto_close_after: '72 hours'
+
+  closed:
+    label: Closed
+    description: Ticket completed and archived
+    weight: 60
+    color: '#6c757d'  # Gray - archived
+    icon: 'lock'
+    permissions:
+      view: ['administrator', 'support_manager', 'ticket_owner']
+      edit: []  # Cannot edit closed tickets
+    metrics:
+      - resolution_time
+      - customer_satisfaction
+      - agent_performance
+
+  reopened:
+    label: Reopened
+    description: Closed ticket reopened by customer or agent
+    weight: 70
+    color: '#e83e8c'  # Pink - requires attention
+    icon: 'arrow-counterclockwise'
+    permissions:
+      view: ['administrator', 'support_manager', 'support_agent', 'ticket_owner']
+      edit: ['administrator', 'support_manager']
+    sla:
+      response_time: '1 hour'
+      resolution_time: '12 hours'
+
+# ====================
+# TRANSITION DEFINITIONS
+# ====================
+
+transitions:
+
+  # Assign new ticket to agent
+  assign_ticket:
+    label: Assign to Agent
+    description: Assign ticket to a support agent
+    from: ['new', 'reopened']
+    to: assigned
+    weight: 10
+    permissions: ['administrator', 'support_manager', 'system']
+    hooks:
+      before:
+        - validate_agent_availability
+        - check_agent_workload
+      after:
+        - notify_assigned_agent
+        - notify_customer_assigned
+        - start_sla_timer
+        - update_agent_queue
+    metadata_required:
+      - assigned_agent_id
+      - assignment_reason
+      - priority_level
+    automation:
+      auto_assign: true
+      rules:
+        - round_robin
+        - skill_based
+        - workload_balanced
+
+  # Agent starts working
+  start_work:
+    label: Start Working
+    description: Agent begins working on the ticket
+    from: ['assigned']
+    to: in_progress
+    weight: 20
+    permissions: ['administrator', 'support_manager', 'assigned_agent']
+    hooks:
+      before:
+        - validate_agent_logged_in
+      after:
+        - log_start_time
+        - update_ticket_board
+    metadata_required:
+      - started_by
+      - initial_notes
+
+  # Request customer information
+  request_customer_info:
+    label: Request Customer Information
+    description: Need additional information from customer
+    from: ['assigned', 'in_progress', 'reopened']
+    to: waiting_customer
+    weight: 30
+    permissions: ['administrator', 'support_manager', 'assigned_agent']
+    hooks:
+      before:
+        - validate_request_details
+      after:
+        - notify_customer_info_needed
+        - pause_sla_timer
+        - set_response_deadline
+    metadata_required:
+      - information_requested
+      - requested_by
+      - deadline_date
+
+  # Customer provides response
+  customer_responded:
+    label: Customer Responded
+    description: Customer provided requested information
+    from: ['waiting_customer']
+    to: in_progress
+    weight: 40
+    permissions: ['system', 'customer']
+    hooks:
+      before:
+        - validate_response_content
+      after:
+        - notify_assigned_agent
+        - resume_sla_timer
+        - log_response_time
+    automation:
+      trigger_event: 'customer_reply_received'
+
+  # Escalate ticket
+  escalate:
+    label: Escalate Ticket
+    description: Escalate to senior support or management
+    from: ['assigned', 'in_progress', 'waiting_customer']
+    to: escalated
+    weight: 50
+    permissions: ['administrator', 'support_manager', 'assigned_agent']
+    hooks:
+      before:
+        - validate_escalation_reason
+        - check_escalation_criteria
+      after:
+        - notify_escalation_team
+        - notify_customer_escalated
+        - update_priority_high
+        - log_escalation_metrics
+    metadata_required:
+      - escalation_reason
+      - escalation_level
+      - escalated_by
+      - escalated_to
+    automation:
+      auto_escalate: true
+      conditions:
+        - sla_breach_imminent
+        - multiple_reassignments
+        - customer_vip_status
+
+  # Resolve ticket
+  resolve_ticket:
+    label: Resolve Ticket
+    description: Mark ticket as resolved
+    from: ['assigned', 'in_progress', 'escalated', 'reopened']
+    to: resolved
+    weight: 60
+    permissions: ['administrator', 'support_manager', 'assigned_agent']
+    hooks:
+      before:
+        - validate_solution_provided
+        - check_all_issues_addressed
+      after:
+        - notify_customer_resolution
+        - request_satisfaction_survey
+        - stop_sla_timer
+        - calculate_resolution_time
+        - update_knowledge_base
+    metadata_required:
+      - resolution_details
+      - resolved_by
+      - solution_category
+      - time_spent_minutes
+
+  # Customer confirms resolution
+  confirm_resolution:
+    label: Confirm Resolution
+    description: Customer confirms issue is resolved
+    from: ['resolved']
+    to: closed
+    weight: 70
+    permissions: ['customer', 'system']
+    hooks:
+      before:
+        - validate_satisfaction_rating
+      after:
+        - send_thank_you_email
+        - update_agent_metrics
+        - archive_ticket
+        - generate_completion_report
+    metadata_required:
+      - customer_satisfied
+      - satisfaction_rating
+      - feedback_comments
+    automation:
+      auto_close: true
+      after_hours: 72
+      condition: 'no_customer_response'
+
+  # Auto-close resolved ticket
+  auto_close:
+    label: Auto-Close Resolved
+    description: Automatically close resolved ticket after timeout
+    from: ['resolved']
+    to: closed
+    weight: 75
+    permissions: ['system']
+    hooks:
+      after:
+        - notify_auto_closed
+        - update_metrics
+        - archive_ticket
+    automation:
+      trigger_event: 'resolution_timeout'
+      timeout_hours: 72
+
+  # Close ticket without resolution
+  close_without_resolution:
+    label: Close Without Resolution
+    description: Close ticket for spam, duplicate, or invalid issues
+    from: ['new', 'assigned', 'waiting_customer']
+    to: closed
+    weight: 80
+    permissions: ['administrator', 'support_manager']
+    hooks:
+      before:
+        - validate_closure_reason
+      after:
+        - notify_customer_closure
+        - log_closure_reason
+        - update_statistics
+    metadata_required:
+      - closure_reason
+      - closure_type  # spam, duplicate, invalid, etc.
+      - closed_by
+
+  # Reopen closed ticket
+  reopen_ticket:
+    label: Reopen Ticket
+    description: Reopen a closed ticket
+    from: ['closed', 'resolved']
+    to: reopened
+    weight: 90
+    permissions: ['administrator', 'support_manager', 'customer']
+    hooks:
+      before:
+        - validate_reopen_reason
+        - check_reopen_eligibility
+      after:
+        - notify_support_team
+        - reassign_to_original_agent
+        - reset_sla_timer
+        - log_reopen_metrics
+    metadata_required:
+      - reopen_reason
+      - reopened_by
+      - additional_context
+
+  # Reassign to different agent
+  reassign:
+    label: Reassign Ticket
+    description: Reassign ticket to different agent
+    from: ['assigned', 'in_progress', 'escalated']
+    to: assigned
+    weight: 100
+    permissions: ['administrator', 'support_manager']
+    hooks:
+      before:
+        - validate_new_agent
+        - check_reassignment_limit
+      after:
+        - notify_old_agent
+        - notify_new_agent
+        - notify_customer_reassigned
+        - log_reassignment_reason
+        - update_workload
+    metadata_required:
+      - new_agent_id
+      - reassignment_reason
+      - reassigned_by
+
+# ====================
+# WORKFLOW HOOKS
+# ====================
+
+workflow_hooks:
+
+  on_ticket_created:
+    - action: send_notification
+      params:
+        recipients: ['support_team']
+        template: new_ticket_alert
+        urgency: medium
+    - action: auto_assign
+      params:
+        method: round_robin
+        consider_skills: true
+    - action: start_sla_tracking
+      params:
+        track_metrics: ['response_time', 'resolution_time']
+
+  on_sla_breach_warning:
+    - action: send_notification
+      params:
+        recipients: ['assigned_agent', 'support_manager']
+        template: sla_warning
+        urgency: high
+    - action: auto_escalate
+      params:
+        escalate_to: support_manager
+        reason: sla_breach_imminent
+
+  on_resolution:
+    - action: send_satisfaction_survey
+      params:
+        delay_hours: 2
+        survey_type: csat
+    - action: update_knowledge_base
+      params:
+        if_resolution_reusable: true
+    - action: update_agent_performance
+      params:
+        metrics: ['resolution_time', 'customer_satisfaction']
+
+  on_escalation:
+    - action: send_notification
+      params:
+        recipients: ['support_manager', 'escalation_team']
+        template: ticket_escalated
+        urgency: high
+        include_history: true
+    - action: increase_priority
+      params:
+        new_priority: high
+    - action: assign_senior_agent
+      params:
+        skill_level: senior
+
+# ====================
+# VALIDATION RULES
+# ====================
+
+validation:
+
+  assign_ticket:
+    - rule: agent_exists
+      message: Assigned agent must be a valid user
+    - rule: agent_has_permission
+      message: Agent must have support_agent role
+    - rule: agent_not_on_leave
+      message: Cannot assign to agent on leave
+
+  resolve_ticket:
+    - rule: solution_provided
+      message: Resolution details are required
+    - rule: minimum_resolution_length
+      message: Resolution must be at least 50 characters
+      params:
+        min_length: 50
+    - rule: all_tasks_completed
+      message: All checklist items must be completed
+
+  escalate:
+    - rule: escalation_reason_required
+      message: Escalation reason is mandatory
+    - rule: escalation_level_valid
+      message: Must specify escalation level (L2, L3, Manager)
+    - rule: not_already_max_level
+      message: Already at maximum escalation level
+
+  reopen_ticket:
+    - rule: within_reopen_window
+      message: Ticket can only be reopened within 30 days
+      params:
+        max_days: 30
+    - rule: reopen_limit_not_exceeded
+      message: Ticket has been reopened too many times
+      params:
+        max_reopens: 3
+
+# ====================
+# BUSINESS RULES
+# ====================
+
+business_rules:
+
+  new:
+    - Auto-assign within 5 minutes using round-robin
+    - High priority tickets assigned immediately
+    - VIP customers get priority routing
+    - Send acknowledgment email to customer
+
+  assigned:
+    - Agent must respond within SLA (2 hours)
+    - Auto-escalate if no response after 4 hours
+    - Agent can reassign once before manager approval required
+    - Track time to first response
+
+  in_progress:
+    - Update customer every 4 hours minimum
+    - Log all actions and communications
+    - Flag if exceeds estimated resolution time
+    - Allow agent to request escalation
+
+  waiting_customer:
+    - Send reminder after 24 hours
+    - Send final reminder after 5 days
+    - Auto-close if no response after 7 days
+    - Pause SLA timer while waiting
+
+  escalated:
+    - Senior agent must respond within 30 minutes
+    - Manager notified immediately
+    - Customer notified of escalation
+    - Track escalation metrics for reporting
+
+  resolved:
+    - Request satisfaction survey
+    - Auto-close after 72 hours if no objection
+    - Track resolution quality metrics
+    - Update knowledge base if applicable
+
+  closed:
+    - Archive permanently after 90 days
+    - Include in performance reports
+    - Allow reopen within 30 days only
+    - Generate closure metrics
+
+# ====================
+# PERMISSIONS MATRIX
+# ====================
+
+permissions:
+
+  view_state:
+    administrator: ['*']
+    support_manager: ['*']
+    support_agent: ['new', 'assigned', 'in_progress', 'waiting_customer', 'escalated', 'resolved', 'reopened']
+    customer: ['assigned', 'in_progress', 'waiting_customer', 'resolved', 'closed', 'reopened']
+
+  trigger_transition:
+    administrator: ['*']
+    support_manager: ['*']
+    support_agent: ['assign_ticket', 'start_work', 'request_customer_info', 'resolve_ticket']
+    customer: ['customer_responded', 'reopen_ticket', 'confirm_resolution']
+    system: ['auto_close', 'customer_responded']
+
+# ====================
+# NOTIFICATIONS
+# ====================
+
+notifications:
+
+  new_ticket_alert:
+    recipients: ['support_team']
+    urgency: medium
+    channels: ['email', 'dashboard', 'slack']
+    subject: New Support Ticket - #{ticket_number}
+    template: |
+      New support ticket received.
+
+      Ticket: #{ticket_number}
+      Customer: {customer_name}
+      Priority: {priority_level}
+      Category: {category}
+
+      {ticket_summary}
+
+  ticket_assigned:
+    recipients: ['assigned_agent', 'customer']
+    urgency: medium
+    channels: ['email', 'dashboard']
+    subject: Ticket Assigned - #{ticket_number}
+    template: |
+      Your ticket has been assigned.
+
+      Agent: {agent_name}
+      Expected Response: {sla_response_time}
+      Ticket: #{ticket_number}
+
+  sla_warning:
+    recipients: ['assigned_agent', 'support_manager']
+    urgency: high
+    channels: ['email', 'sms', 'dashboard']
+    subject: SLA Warning - #{ticket_number}
+    template: |
+      ⚠️ SLA BREACH WARNING
+
+      Ticket: #{ticket_number}
+      Time Remaining: {time_remaining}
+      SLA Deadline: {sla_deadline}
+
+      IMMEDIATE ACTION REQUIRED
+
+  ticket_resolved:
+    recipients: ['customer']
+    urgency: low
+    channels: ['email']
+    subject: Your Ticket Has Been Resolved
+    template: |
+      We have resolved your support ticket.
+
+      Ticket: #{ticket_number}
+      Resolution: {resolution_summary}
+      Resolved By: {agent_name}
+
+      Please confirm if this resolves your issue.
+      This ticket will auto-close in 72 hours.
+
+      Rate your experience: {survey_link}
+
+  ticket_escalated:
+    recipients: ['customer', 'escalation_team']
+    urgency: high
+    channels: ['email', 'dashboard']
+    subject: Ticket Escalated - #{ticket_number}
+    template: |
+      Your ticket has been escalated for priority handling.
+
+      Ticket: #{ticket_number}
+      Escalation Level: {escalation_level}
+      Reason: {escalation_reason}
+
+      A senior agent will review your case shortly.
+
+# ====================
+# METRICS & SLA TRACKING
+# ====================
+
+metrics:
+
+  response_time:
+    description: Time from ticket creation to first agent response
+    target: 2 hours
+    critical: 4 hours
+    track_by:
+      - priority_level
+      - time_of_day
+      - agent
+
+  resolution_time:
+    description: Time from creation to resolution
+    target: 24 hours
+    critical: 48 hours
+    track_by:
+      - ticket_category
+      - complexity
+      - escalation_level
+
+  customer_satisfaction:
+    description: CSAT score from post-resolution survey
+    target: 4.5
+    minimum: 4.0
+    scale: 1-5
+
+  first_contact_resolution:
+    description: Percentage resolved without escalation/reassignment
+    target: 75%
+    minimum: 65%
+
+  reopening_rate:
+    description: Percentage of tickets reopened after closure
+    target: less_than_5%
+    critical: 10%
+
+  sla_compliance:
+    description: Percentage of tickets meeting SLA
+    target: 95%
+    minimum: 90%
+
+# ====================
+# DATABASE CONFIGURATION
+# ====================
+
+database:
+  table: wp_app_support_tickets
+  state_field: ticket_status
+
+  additional_fields:
+    ticket_number:
+      type: varchar(50)
+      description: Unique ticket reference
+    customer_id:
+      type: bigint
+      description: Customer who created ticket
+    assigned_agent_id:
+      type: bigint
+      description: Currently assigned support agent
+    priority_level:
+      type: enum('low','medium','high','critical')
+      description: Ticket priority
+    category:
+      type: varchar(50)
+      description: Issue category
+    subcategory:
+      type: varchar(50)
+      description: Issue subcategory
+    resolution_details:
+      type: text
+      description: How the issue was resolved
+    satisfaction_rating:
+      type: tinyint
+      description: Customer satisfaction (1-5)
+    created_at:
+      type: datetime
+      description: Ticket creation time
+    first_response_at:
+      type: datetime
+      description: Time of first agent response
+    resolved_at:
+      type: datetime
+      description: Time ticket was resolved
+    closed_at:
+      type: datetime
+      description: Time ticket was closed
+
+  # State history logging
+  audit_table: wp_app_ticket_state_history
+  audit_fields:
+    - id
+    - ticket_id
+    - from_state
+    - to_state
+    - transition
+    - triggered_by_user_id
+    - triggered_at
+    - sla_met (boolean)
+    - metadata (JSON)
+
+# ====================
+# METADATA
+# ====================
+
+version: '1.0.0'
+last_modified: '2025-11-07'
+author: 'arisciwek'
+plugin: 'wp-state-machine'
+license: 'GPL v2 or later'
+
+# ====================
+# IMPLEMENTATION NOTES
+# ====================
+
+implementation_guide: |
+
+  This state machine demonstrates:
+
+  1. **Complex Branching**
+     Multiple paths from each state based on context
+
+  2. **SLA Tracking**
+     Time-based rules and auto-escalation
+
+  3. **Auto-Assignment**
+     Round-robin and skill-based routing
+
+  4. **Metrics Collection**
+     Performance tracking and reporting
+
+  5. **Customer Communication**
+     Automated notifications at each step
+
+  6. **Escalation Handling**
+     Multi-level escalation with auto-triggers
+
+  To implement:
+  - Create custom post type 'support_ticket'
+  - Add custom fields for agent assignment
+  - Implement SLA tracking hooks
+  - Set up notification templates
+  - Configure auto-assignment rules
+  - Build agent dashboard
+  - Create reporting interface
+
+  For integration examples, see:
+  /examples/plugin-integration-example.php

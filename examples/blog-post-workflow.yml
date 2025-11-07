@@ -1,0 +1,409 @@
+# Blog Post State Machine (Simple Example)
+#
+# This is a minimal, easy-to-understand example of a state machine
+# Perfect for learning or as a starting template
+#
+# Author: arisciwek
+# Version: 1.0.0
+# Last Modified: 2025-11-07
+# License: GPL v2 or later
+
+# ====================
+# BASIC INFO
+# ====================
+
+id: blog_post_workflow
+label: Blog Post Workflow
+entity_type: post
+field_name: post_status
+description: Simple editorial workflow for blog posts
+
+# The state a new post starts with
+initial_state: draft
+
+# Group this workflow belongs to (optional)
+workflow_group: content-management
+
+# ====================
+# STATES
+# Simple workflow: draft → review → published
+# ====================
+
+states:
+
+  # Initial state - author is writing
+  draft:
+    label: Draft
+    description: Post is being written by author
+    weight: 0
+    color: '#6c757d'  # Gray - work in progress
+    icon: 'pencil-square'
+    is_initial: true
+
+    # Who can see and edit this state
+    permissions:
+      view: ['administrator', 'editor', 'author', 'post_owner']
+      edit: ['administrator', 'editor', 'author', 'post_owner']
+
+  # Under review by editor
+  review:
+    label: Under Review
+    description: Post submitted for editorial review
+    weight: 10
+    color: '#ffc107'  # Yellow - needs attention
+    icon: 'eye'
+
+    permissions:
+      view: ['administrator', 'editor', 'author', 'post_owner']
+      edit: ['administrator', 'editor']
+
+  # Approved and published
+  published:
+    label: Published
+    description: Post is live on the website
+    weight: 20
+    color: '#28a745'  # Green - success
+    icon: 'check-circle'
+
+    permissions:
+      view: ['*']  # Everyone can view
+      edit: ['administrator', 'editor']
+
+  # Archived/removed
+  archived:
+    label: Archived
+    description: Post removed from public view
+    weight: 30
+    color: '#6c757d'  # Gray - inactive
+    icon: 'archive'
+
+    permissions:
+      view: ['administrator', 'editor', 'post_owner']
+      edit: ['administrator']
+
+# ====================
+# TRANSITIONS
+# Define how states connect to each other
+# ====================
+
+transitions:
+
+  # Author submits draft for review
+  submit_for_review:
+    label: Submit for Review
+    description: Send draft to editor for review
+    from: ['draft']  # Can only submit from draft
+    to: review
+    weight: 10
+
+    # Who can trigger this transition
+    permissions: ['administrator', 'editor', 'author']
+
+    # Actions to run before/after transition
+    hooks:
+      before:
+        - validate_post_has_title
+        - validate_post_has_content
+      after:
+        - notify_editor
+        - log_submission
+
+  # Editor publishes the post
+  publish:
+    label: Publish Post
+    description: Make post live on website
+    from: ['review', 'draft']  # Can publish from review or draft
+    to: published
+    weight: 20
+
+    permissions: ['administrator', 'editor']
+
+    hooks:
+      before:
+        - validate_post_ready
+        - check_seo_requirements
+      after:
+        - notify_author
+        - notify_subscribers
+        - update_sitemap
+        - clear_cache
+
+  # Editor sends back to draft
+  return_to_draft:
+    label: Return to Draft
+    description: Send back to author for revisions
+    from: ['review']
+    to: draft
+    weight: 30
+
+    permissions: ['administrator', 'editor']
+
+    hooks:
+      after:
+        - notify_author_with_feedback
+
+    # Required data when using this transition
+    metadata_required:
+      - editor_feedback
+      - reviewed_by
+
+  # Archive published post
+  archive:
+    label: Archive Post
+    description: Remove post from public view
+    from: ['published']
+    to: archived
+    weight: 40
+
+    permissions: ['administrator', 'editor']
+
+    hooks:
+      after:
+        - update_sitemap
+        - clear_cache
+
+    metadata_required:
+      - archive_reason
+
+  # Restore archived post
+  restore:
+    label: Restore from Archive
+    description: Re-publish archived post
+    from: ['archived']
+    to: published
+    weight: 50
+
+    permissions: ['administrator']
+
+    hooks:
+      after:
+        - update_sitemap
+        - clear_cache
+
+# ====================
+# WORKFLOW HOOKS (Optional)
+# Actions that happen on specific events
+# ====================
+
+workflow_hooks:
+
+  on_submit_for_review:
+    - action: send_notification
+      params:
+        recipients: ['editor']
+        template: new_post_for_review
+        urgency: medium
+
+  on_publish:
+    - action: send_notification
+      params:
+        recipients: ['author', 'subscribers']
+        template: post_published
+    - action: social_share
+      params:
+        platforms: ['twitter', 'facebook']
+        auto_post: true
+
+# ====================
+# VALIDATION RULES (Optional)
+# ====================
+
+validation:
+
+  submit_for_review:
+    - rule: has_title
+      message: Post must have a title
+    - rule: has_content
+      message: Post must have content
+    - rule: min_word_count
+      message: Post must be at least 300 words
+      params:
+        min_words: 300
+
+  publish:
+    - rule: has_featured_image
+      message: Published posts should have a featured image
+    - rule: has_category
+      message: Post must be assigned to a category
+
+# ====================
+# BUSINESS RULES (Optional)
+# ====================
+
+business_rules:
+
+  draft:
+    - Auto-save every 2 minutes
+    - Delete abandoned drafts after 30 days
+    - Authors can delete their own drafts
+
+  review:
+    - Target review time: 24 hours
+    - Send reminder to editor after 2 days
+    - Auto-escalate after 5 days
+
+  published:
+    - Track page views and engagement
+    - Generate monthly reports
+    - Archive after 2 years (configurable)
+
+# ====================
+# PERMISSIONS MATRIX (Optional)
+# ====================
+
+permissions:
+
+  # Who can see posts in each state
+  view_state:
+    administrator: ['*']  # Can see all states
+    editor: ['*']
+    author: ['draft', 'review', 'published', 'archived']
+    subscriber: ['published']
+    guest: ['published']
+
+  # Who can trigger which transitions
+  trigger_transition:
+    administrator: ['*']  # Can trigger all transitions
+    editor: ['submit_for_review', 'publish', 'return_to_draft', 'archive']
+    author: ['submit_for_review']
+
+# ====================
+# NOTIFICATIONS (Optional)
+# ====================
+
+notifications:
+
+  new_post_for_review:
+    recipients: ['editor']
+    urgency: medium
+    channels: ['email', 'dashboard']
+    subject: New Post Ready for Review
+    template: |
+      A new post is ready for your review.
+
+      Title: {post_title}
+      Author: {author_name}
+      Word Count: {word_count}
+
+      Please review at your earliest convenience.
+
+  post_published:
+    recipients: ['author']
+    urgency: low
+    channels: ['email']
+    subject: Your Post Has Been Published
+    template: |
+      Congratulations! Your post has been published.
+
+      Title: {post_title}
+      URL: {post_url}
+      Published: {publish_date}
+
+      View your post: {post_url}
+
+# ====================
+# DATABASE CONFIG (Optional)
+# ====================
+
+database:
+  table: wp_posts
+  state_field: post_status
+
+  additional_fields:
+    post_title:
+      type: text
+      description: Post title
+    post_content:
+      type: longtext
+      description: Post content
+    post_author:
+      type: bigint
+      description: Author user ID
+    editor_feedback:
+      type: text
+      description: Editor's review comments
+
+  # Optional: separate table for state history
+  audit_table: wp_post_state_history
+  audit_fields:
+    - id
+    - post_id
+    - from_state
+    - to_state
+    - transition
+    - triggered_by_user_id
+    - triggered_at
+    - metadata (JSON)
+
+# ====================
+# METADATA
+# ====================
+
+version: '1.0.0'
+last_modified: '2025-11-07'
+author: 'arisciwek'
+plugin: 'wp-state-machine'
+license: 'GPL v2 or later'
+
+# ====================
+# HOW TO USE THIS FILE
+# ====================
+
+usage_guide: |
+
+  STEP 1: Copy this file
+  Copy this file to your plugin's config directory
+
+  STEP 2: Customize states
+  Modify the states section to match your workflow
+  Keep it simple - start with 3-5 states
+
+  STEP 3: Define transitions
+  Add transitions that connect your states
+  Each transition should have clear from/to states
+
+  STEP 4: Add permissions
+  Define who can view and trigger transitions
+  Use WordPress roles or custom capabilities
+
+  STEP 5: Implement hooks (optional)
+  Create functions for the hooks referenced in transitions
+  Example: validate_post_has_title(), notify_editor()
+
+  STEP 6: Test your workflow
+  Create test content and try all transitions
+  Verify permissions work as expected
+
+  For more examples, see:
+  - /examples/order-state-machine.yml (complex example)
+  - /wp-docs/06-state-machines/ (documentation)
+
+  Need help? Check the documentation or contact support.
+
+# ====================
+# PROGRESSION PATH
+# ====================
+
+learn_more: |
+
+  Once you're comfortable with this simple workflow, you can:
+
+  1. Add more states
+     Example: Add 'scheduled' state for scheduled posts
+
+  2. Add metadata requirements
+     Example: Require 'scheduled_date' when transitioning to scheduled
+
+  3. Add automation
+     Example: Auto-publish at scheduled time
+
+  4. Add guards (conditional transitions)
+     Example: Only allow publish if post meets quality score
+
+  5. Add parallel workflows
+     Example: Separate workflow for different post types
+
+  6. Integrate with other plugins
+     Example: Trigger quotation when order approved
+
+  See order-state-machine.yml for advanced examples.

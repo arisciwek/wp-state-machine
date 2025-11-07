@@ -1,0 +1,441 @@
+/**
+ * Settings Page Styles
+ *
+ * @package     WP_State_Machine
+ * @subpackage  Assets/CSS
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-state-machine/assets/css/settings.css
+ *
+ * Description: Styles for State Machine settings page dengan multi-tab interface.
+ *              Includes custom toggle switches, info boxes, dan responsive layout.
+ *
+ * Changelog:
+ * 1.0.0 - 2025-11-07
+ * - Initial creation
+ * - Tab navigation styles
+ * - Toggle switch component
+ * - Info box component
+ * - Stats container
+ * - Toast notification
+ */
+
+/* ========================================
+   Settings Page Container
+   ======================================== */
+.sm-settings-wrap {
+    margin: 20px 20px 20px 0;
+}
+
+.sm-settings-wrap .wp-heading-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sm-settings-wrap .wp-heading-inline .dashicons {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+}
+
+/* ========================================
+   Tab Navigation
+   ======================================== */
+.sm-settings-tabs {
+    margin: 20px 0;
+    border-bottom: 1px solid #c3c4c7;
+}
+
+.sm-settings-tabs .nav-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 15px;
+    margin: 0 4px -1px 0;
+    font-size: 14px;
+    text-decoration: none;
+    background: #f6f7f7;
+    border: 1px solid #c3c4c7;
+    color: #50575e;
+    transition: all 0.2s ease;
+}
+
+.sm-settings-tabs .nav-tab .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+.sm-settings-tabs .nav-tab:hover {
+    background: #fff;
+    color: #2271b1;
+}
+
+.sm-settings-tabs .nav-tab-active {
+    background: #fff;
+    border-bottom-color: #fff;
+    color: #2271b1;
+}
+
+/* ========================================
+   Tab Content
+   ======================================== */
+.sm-settings-tab {
+    display: none;
+    animation: fadeIn 0.3s ease-in;
+}
+
+.sm-settings-tab.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.sm-settings-section {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.sm-settings-section h2 {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #dcdcde;
+}
+
+/* ========================================
+   Form Table Enhancements
+   ======================================== */
+.form-table th {
+    width: 250px;
+    padding: 20px 10px 20px 0;
+    vertical-align: top;
+}
+
+.form-table td {
+    padding: 15px 10px;
+    vertical-align: top;
+}
+
+.form-table p.description {
+    margin-top: 8px;
+    color: #646970;
+    font-size: 13px;
+}
+
+/* ========================================
+   Toggle Switch Component
+   ======================================== */
+.sm-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+}
+
+.sm-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.sm-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #c3c4c7;
+    transition: .3s;
+    border-radius: 26px;
+}
+
+.sm-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+}
+
+.sm-switch input:checked + .sm-slider {
+    background-color: #2271b1;
+}
+
+.sm-switch input:checked + .sm-slider:before {
+    transform: translateX(24px);
+}
+
+.sm-switch input:focus + .sm-slider {
+    box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.2);
+}
+
+.sm-switch input:disabled + .sm-slider {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ========================================
+   Info Box Component
+   ======================================== */
+.sm-info-box {
+    background: #f0f6fc;
+    border: 1px solid #c5d9ed;
+    border-left: 4px solid #2271b1;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 20px 0;
+}
+
+.sm-info-box h4 {
+    margin: 0 0 10px 0;
+    color: #2271b1;
+    font-size: 14px;
+}
+
+.sm-info-box ul {
+    margin: 10px 0 0 20px;
+    list-style: disc;
+}
+
+.sm-info-box li {
+    margin-bottom: 5px;
+    color: #2c3338;
+    font-size: 13px;
+}
+
+.sm-info-box code {
+    background: #fff;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    color: #d63638;
+}
+
+/* ========================================
+   Statistics Container
+   ======================================== */
+.sm-stats-container {
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    padding: 15px;
+}
+
+.sm-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.sm-stat-card {
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    padding: 15px;
+    text-align: center;
+}
+
+.sm-stat-card .stat-label {
+    display: block;
+    font-size: 12px;
+    color: #646970;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.sm-stat-card .stat-value {
+    display: block;
+    font-size: 28px;
+    font-weight: 600;
+    color: #2271b1;
+    line-height: 1;
+}
+
+.sm-stat-card .stat-unit {
+    display: block;
+    font-size: 12px;
+    color: #646970;
+    margin-top: 5px;
+}
+
+/* ========================================
+   Button Enhancements
+   ======================================== */
+.button .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+.sm-save-settings {
+    min-width: 200px;
+}
+
+/* Loading state for buttons */
+.button.loading {
+    position: relative;
+    color: transparent;
+    pointer-events: none;
+}
+
+.button.loading::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ========================================
+   Toast Notification
+   ======================================== */
+.sm-toast {
+    visibility: hidden;
+    min-width: 250px;
+    background-color: #2c3338;
+    color: #fff;
+    text-align: center;
+    border-radius: 4px;
+    padding: 16px;
+    position: fixed;
+    z-index: 99999;
+    right: 30px;
+    bottom: 30px;
+    font-size: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: all 0.3s ease;
+}
+
+.sm-toast.show {
+    visibility: visible;
+    animation: slideInUp 0.3s ease, slideOutDown 0.3s ease 2.7s;
+}
+
+.sm-toast.success {
+    background-color: #00a32a;
+}
+
+.sm-toast.error {
+    background-color: #d63638;
+}
+
+.sm-toast.warning {
+    background-color: #dba617;
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(100px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutDown {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(100px);
+        opacity: 0;
+    }
+}
+
+/* ========================================
+   Responsive Design
+   ======================================== */
+@media screen and (max-width: 782px) {
+    .form-table th {
+        width: 100%;
+        padding: 10px 0;
+    }
+
+    .form-table td {
+        padding: 10px 0;
+    }
+
+    .sm-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .sm-settings-tabs .nav-tab {
+        display: block;
+        margin: 0 0 -1px 0;
+    }
+}
+
+/* ========================================
+   WordPress Admin Color Scheme Support
+   ======================================== */
+body.admin-color-sunrise .sm-switch input:checked + .sm-slider,
+body.admin-color-sunrise .sm-stat-card .stat-value {
+    background-color: #d1864a;
+}
+
+body.admin-color-ocean .sm-switch input:checked + .sm-slider,
+body.admin-color-ocean .sm-stat-card .stat-value {
+    background-color: #738e96;
+}
+
+body.admin-color-midnight .sm-switch input:checked + .sm-slider,
+body.admin-color-midnight .sm-stat-card .stat-value {
+    background-color: #e14d43;
+}
+
+body.admin-color-ectoplasm .sm-switch input:checked + .sm-slider,
+body.admin-color-ectoplasm .sm-stat-card .stat-value {
+    background-color: #a7b656;
+}
+
+body.admin-color-coffee .sm-switch input:checked + .sm-slider,
+body.admin-color-coffee .sm-stat-card .stat-value {
+    background-color: #c7a589;
+}
+
+body.admin-color-blue .sm-switch input:checked + .sm-slider,
+body.admin-color-blue .sm-stat-card .stat-value {
+    background-color: #096484;
+}
+
+body.admin-color-light .sm-switch input:checked + .sm-slider,
+body.admin-color-light .sm-stat-card .stat-value {
+    background-color: #04a4cc;
+}

@@ -4,7 +4,7 @@
  *
  * @package     WP_State_Machine
  * @subpackage  Models/TransitionLog
- * @version     1.0.0
+ * @version     1.0.1
  * @author      arisciwek
  *
  * Path: /wp-state-machine/src/Models/TransitionLog/TransitionLogModel.php
@@ -13,6 +13,7 @@
  *              Records history of all state transitions.
  *              Provides audit trail and tracking.
  *              Extends AbstractStateMachineModel for base functionality.
+ *              Supports per-plugin tables for scalability.
  *
  * Fields:
  * - id              : Primary key
@@ -27,15 +28,32 @@
  * - metadata        : JSON additional data
  * - created_at      : Transition timestamp
  *
+ * Per-Plugin Tables:
+ * Supports isolated log tables per plugin to prevent performance issues
+ * with millions of records in single table.
+ *
  * Usage Examples:
  *
- * Example 1: Log a transition
+ * Example 1: Central table (backward compatible)
  * ```php
  * $log_model = new TransitionLogModel();
+ * // Uses: app_sm_transition_logs (central)
+ * ```
+ *
+ * Example 2: Per-plugin table (recommended for high-volume)
+ * ```php
+ * $log_model = new TransitionLogModel('wp-rfq');
+ * // Uses: app_wp_rfq_sm_logs (isolated)
+ * // Table created automatically if not exists
+ * ```
+ *
+ * Example 3: Log a transition
+ * ```php
+ * $log_model = new TransitionLogModel('wp-rfq');
  * $log_id = $log_model->create([
  *     'machine_id' => 1,
  *     'entity_id' => 123,
- *     'entity_type' => 'post',
+ *     'entity_type' => 'order',
  *     'from_state_id' => 2,
  *     'to_state_id' => 3,
  *     'transition_id' => 5,
@@ -45,20 +63,21 @@
  * ]);
  * ```
  *
- * Example 2: Get entity history
+ * Example 4: Get entity history
  * ```php
- * $logs = $log_model->getEntityHistory('post', 123);
+ * $logs = $log_model->getEntityHistory('order', 123);
  * foreach ($logs as $log) {
  *     echo "{$log->created_at}: {$log->from_state_name} → {$log->to_state_name}";
  * }
  * ```
  *
- * Example 3: Get user activity
- * ```php
- * $user_logs = $log_model->getUserLogs($user_id, 10);
- * ```
- *
  * Changelog:
+ * 1.0.1 - 2025-11-07 (TODO-6104)
+ * - Added per-plugin table support
+ * - Dynamic table name resolution
+ * - Auto table creation for plugin-specific logs
+ * - Dynamic cache group per plugin
+ * - Backward compatible with central table
  * 1.0.0 - 2025-11-07
  * - Initial creation for Prioritas #5
  * - Extended AbstractStateMachineModel
@@ -76,7 +95,16 @@ defined('ABSPATH') || exit;
 class TransitionLogModel extends AbstractStateMachineModel {
 
     /**
+     * Plugin slug for isolated table
+     * null = use central table (backward compatible)
+     *
+     * @var string|null
+     */
+    protected $plugin_slug;
+
+    /**
      * Table name (without prefix)
+     * Will be set dynamically based on plugin_slug
      *
      * @var string
      */
@@ -91,6 +119,7 @@ class TransitionLogModel extends AbstractStateMachineModel {
 
     /**
      * Cache group for this model
+     * Will be set dynamically based on plugin_slug
      *
      * @var string
      */
@@ -98,11 +127,192 @@ class TransitionLogModel extends AbstractStateMachineModel {
 
     /**
      * Constructor
-     * Initialize parent and set table name
+     * Initialize parent and set table name (dynamic per plugin)
+     *
+     * @param string|null $plugin_slug Plugin slug for per-plugin table, null for central
      */
-    public function __construct() {
+    public function __construct($plugin_slug = null) {
         parent::__construct();
+
+        $this->plugin_slug = $plugin_slug;
+        $this->table = $this->resolveTableName($plugin_slug);
         $this->setTableName($this->table);
+
+        // Dynamic cache group per plugin
+        $this->cache_group = $plugin_slug
+            ? "{$plugin_slug}_transition_logs"
+            : 'transition_logs';
+
+        // Create plugin table if needed (per-plugin tables only)
+        if ($plugin_slug) {
+            $this->maybeCreatePluginTable();
+        }
+    }
+
+    /**
+     * Resolve table name based on plugin slug
+     *
+     * @param string|null $plugin_slug Plugin slug
+     * @return string Full table name with prefix
+     */
+    protected function resolveTableName($plugin_slug): string {
+        global $wpdb;
+
+        if ($plugin_slug) {
+            // Per-plugin table: app_wp_rfq_sm_logs
+            return $wpdb->prefix . "app_{$plugin_slug}_sm_logs";
+        }
+
+        // Central table (backward compatible)
+        return $wpdb->prefix . 'app_sm_transition_logs';
+    }
+
+    /**
+     * Create plugin-specific table if not exists
+     *
+     * @return void
+     */
+    private function maybeCreatePluginTable() {
+        global $wpdb;
+        $table_name = $this->getTableName();
+
+        // Check if table exists
+        $table_exists = $wpdb->get_var(
+            $wpdb->prepare("SHOW TABLES LIKE %s", $table_name)
+        );
+
+        if (!$table_exists) {
+            $this->createPluginTable();
+        }
+    }
+
+    /**
+     * Create plugin-specific logs table
+     * Uses same schema as central table
+     *
+     * @return void
+     */
+    private function createPluginTable() {
+        global $wpdb;
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+
+        $table_name = $this->getTableName();
+        $charset_collate = $wpdb->get_charset_collate();
+
+        // Same schema as TransitionLogsDB but with dynamic table name
+        $sql = "CREATE TABLE {$table_name} (
+            id bigint(20) UNSIGNED NOT NULL auto_increment,
+            machine_id bigint(20) UNSIGNED NOT NULL,
+            entity_id bigint(20) UNSIGNED NOT NULL,
+            entity_type varchar(50) NOT NULL,
+            from_state_id bigint(20) UNSIGNED NULL,
+            to_state_id bigint(20) UNSIGNED NOT NULL,
+            transition_id bigint(20) UNSIGNED NULL,
+            user_id bigint(20) UNSIGNED NOT NULL,
+            comment text NULL,
+            metadata text NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY machine_id_index (machine_id),
+            KEY entity_index (entity_type, entity_id),
+            KEY from_state_index (from_state_id),
+            KEY to_state_index (to_state_id),
+            KEY user_id_index (user_id),
+            KEY created_at_index (created_at)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // Add foreign keys
+        $this->addForeignKeys($table_name);
+
+        // Log table creation
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("[TransitionLogModel] Created plugin table: {$table_name}");
+        }
+    }
+
+    /**
+     * Add foreign key constraints to plugin table
+     *
+     * @param string $table_name Table name
+     * @return void
+     */
+    private function addForeignKeys($table_name) {
+        global $wpdb;
+        $machines_table = $wpdb->prefix . 'app_sm_machines';
+        $states_table = $wpdb->prefix . 'app_sm_states';
+        $transitions_table = $wpdb->prefix . 'app_sm_transitions';
+
+        // Use plugin_slug for unique constraint names
+        $slug = $this->plugin_slug ? $this->plugin_slug : 'central';
+        $slug = str_replace('-', '_', $slug); // Replace hyphens with underscores for SQL
+
+        $constraints = [
+            [
+                'name' => "fk_{$slug}_logs_machine",
+                'sql' => "ALTER TABLE {$table_name}
+                         ADD CONSTRAINT fk_{$slug}_logs_machine
+                         FOREIGN KEY (machine_id)
+                         REFERENCES {$machines_table}(id)
+                         ON DELETE CASCADE"
+            ],
+            [
+                'name' => "fk_{$slug}_logs_from_state",
+                'sql' => "ALTER TABLE {$table_name}
+                         ADD CONSTRAINT fk_{$slug}_logs_from_state
+                         FOREIGN KEY (from_state_id)
+                         REFERENCES {$states_table}(id)
+                         ON DELETE SET NULL"
+            ],
+            [
+                'name' => "fk_{$slug}_logs_to_state",
+                'sql' => "ALTER TABLE {$table_name}
+                         ADD CONSTRAINT fk_{$slug}_logs_to_state
+                         FOREIGN KEY (to_state_id)
+                         REFERENCES {$states_table}(id)
+                         ON DELETE CASCADE"
+            ],
+            [
+                'name' => "fk_{$slug}_logs_transition",
+                'sql' => "ALTER TABLE {$table_name}
+                         ADD CONSTRAINT fk_{$slug}_logs_transition
+                         FOREIGN KEY (transition_id)
+                         REFERENCES {$transitions_table}(id)
+                         ON DELETE SET NULL"
+            ]
+        ];
+
+        foreach ($constraints as $constraint) {
+            // Check if constraint already exists
+            $constraint_exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+                 WHERE CONSTRAINT_SCHEMA = DATABASE()
+                 AND TABLE_NAME = %s
+                 AND CONSTRAINT_NAME = %s",
+                $table_name,
+                $constraint['name']
+            ));
+
+            if ($constraint_exists > 0) {
+                continue; // Skip if exists
+            }
+
+            // Add foreign key constraint
+            $result = $wpdb->query($constraint['sql']);
+            if ($result === false && defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("[TransitionLogModel] Failed to add FK {$constraint['name']}: " . $wpdb->last_error);
+            }
+        }
+    }
+
+    /**
+     * Get plugin slug
+     *
+     * @return string|null Plugin slug or null for central table
+     */
+    public function getPluginSlug(): ?string {
+        return $this->plugin_slug;
     }
 
     // ========================================
