@@ -64,7 +64,7 @@ class StateMachinesDB {
 
         return "CREATE TABLE {$table_name} (
             id bigint(20) UNSIGNED NOT NULL auto_increment,
-            group_id bigint(20) UNSIGNED NULL,
+            workflow_group_id bigint(20) UNSIGNED NULL,
             name varchar(100) NOT NULL,
             slug varchar(100) NOT NULL,
             entity_type varchar(50) NOT NULL,
@@ -77,7 +77,7 @@ class StateMachinesDB {
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
             UNIQUE KEY slug (slug),
-            KEY group_id_index (group_id),
+            KEY workflow_group_id_index (workflow_group_id),
             KEY entity_type_index (entity_type),
             KEY plugin_slug_index (plugin_slug),
             KEY is_active_index (is_active),
@@ -99,10 +99,10 @@ class StateMachinesDB {
 
         $constraints = [
             [
-                'name' => 'fk_machine_group',
+                'name' => 'fk_machine_workflow_group',
                 'sql' => "ALTER TABLE {$table_name}
-                         ADD CONSTRAINT fk_machine_group
-                         FOREIGN KEY (group_id)
+                         ADD CONSTRAINT fk_machine_workflow_group
+                         FOREIGN KEY (workflow_group_id)
                          REFERENCES {$groups_table}(id)
                          ON DELETE SET NULL"
             ]

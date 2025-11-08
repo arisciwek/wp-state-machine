@@ -4,7 +4,7 @@
  *
  * @package     WP_State_Machine
  * @subpackage  Includes
- * @version     1.0.3
+ * @version     1.0.6
  * @author      arisciwek
  *
  * Path: /wp-state-machine/includes/class-dependencies.php
@@ -13,6 +13,23 @@
  *              dan library eksternal untuk State Machine plugin
  *
  * Changelog:
+ * 1.0.6 - 2025-11-08
+ * - Added transitions page assets enqueuing
+ * - Added localize_transitions_scripts() method
+ * - Registered transitions.css and transitions.js
+ * - Fixed: Refactored transitions view to follow clean architecture
+ *
+ * 1.0.5 - 2025-11-08
+ * - Added states page assets enqueuing
+ * - Added localize_states_scripts() method
+ * - Registered states.css and states.js
+ * - Fixed: Refactored states view to follow clean architecture
+ *
+ * 1.0.4 - 2025-11-08
+ * - Added machines page assets enqueuing
+ * - Added localize_machines_scripts() method
+ * - Registered machines.css and machines.js
+ * - Fixed: Moved wp_localize_script from view to dependencies class
  * 1.0.3 - 2025-11-07 (TODO-6102 PRIORITAS #8)
  * - Added settings page assets enqueuing
  * - Added localize_settings_scripts() method
@@ -100,6 +117,36 @@ class WP_State_Machine_Dependencies {
             //     [],
             //     $this->version
             // );
+        }
+
+        // Machines page specific styles
+        if ($screen->id === 'toplevel_page_wp-state-machine') {
+            wp_enqueue_style(
+                'wp-state-machine-machines',
+                WP_STATE_MACHINE_URL . 'assets/css/machines.css',
+                [],
+                $this->version
+            );
+        }
+
+        // States page specific styles
+        if ($screen->id === 'state-machines_page_wp-state-machine-states') {
+            wp_enqueue_style(
+                'wp-state-machine-states',
+                WP_STATE_MACHINE_URL . 'assets/css/states.css',
+                [],
+                $this->version
+            );
+        }
+
+        // Transitions page specific styles
+        if ($screen->id === 'state-machines_page_wp-state-machine-transitions') {
+            wp_enqueue_style(
+                'wp-state-machine-transitions',
+                WP_STATE_MACHINE_URL . 'assets/css/transitions.css',
+                [],
+                $this->version
+            );
         }
 
         // Settings page specific styles
@@ -194,6 +241,48 @@ class WP_State_Machine_Dependencies {
             $this->localize_settings_scripts();
         }
 
+        // Machines page specific scripts
+        if ($screen->id === 'toplevel_page_wp-state-machine') {
+            wp_enqueue_script(
+                'wp-state-machine-machines',
+                WP_STATE_MACHINE_URL . 'assets/js/machines.js',
+                ['jquery', 'datatables'],
+                $this->version,
+                true
+            );
+
+            // Localize script for machines page
+            $this->localize_machines_scripts();
+        }
+
+        // States page specific scripts
+        if ($screen->id === 'state-machines_page_wp-state-machine-states') {
+            wp_enqueue_script(
+                'wp-state-machine-states',
+                WP_STATE_MACHINE_URL . 'assets/js/states.js',
+                ['jquery', 'datatables'],
+                $this->version,
+                true
+            );
+
+            // Localize script for states page
+            $this->localize_states_scripts();
+        }
+
+        // Transitions page specific scripts
+        if ($screen->id === 'state-machines_page_wp-state-machine-transitions') {
+            wp_enqueue_script(
+                'wp-state-machine-transitions',
+                WP_STATE_MACHINE_URL . 'assets/js/transitions.js',
+                ['jquery', 'datatables'],
+                $this->version,
+                true
+            );
+
+            // Localize script for transitions page
+            $this->localize_transitions_scripts();
+        }
+
         // Logs page specific scripts
         if ($screen->id === 'state-machines_page_wp-state-machine-logs') {
             // Register DataTables handle for dependencies
@@ -219,6 +308,10 @@ class WP_State_Machine_Dependencies {
 
         // Workflow Groups page specific scripts
         if ($screen->id === 'state-machines_page_wp-state-machine-groups') {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Enqueuing workflow-groups.js for screen: ' . $screen->id);
+            }
+
             wp_enqueue_script(
                 'wp-state-machine-workflow-groups',
                 WP_STATE_MACHINE_URL . 'assets/js/workflow-groups.js',
@@ -229,6 +322,10 @@ class WP_State_Machine_Dependencies {
 
             // Localize script for workflow groups page
             $this->localize_workflow_groups_scripts();
+
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Workflow groups scripts enqueued successfully');
+            }
         }
     }
 
@@ -308,34 +405,21 @@ class WP_State_Machine_Dependencies {
             'nonce' => wp_create_nonce('wp_state_machine_nonce'),
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'i18n' => [
+                'addTitle' => __('Add New Workflow Group', 'wp-state-machine'),
+                'editTitle' => __('Edit Workflow Group', 'wp-state-machine'),
                 'confirmDelete' => __('Are you sure you want to delete this workflow group?', 'wp-state-machine'),
                 'deleteError' => __('Cannot delete group. Please reassign or remove all machines first.', 'wp-state-machine'),
                 'active' => __('Active', 'wp-state-machine'),
                 'inactive' => __('Inactive', 'wp-state-machine'),
                 'noMachines' => __('No machines assigned', 'wp-state-machine'),
-                'dataTable' => [
-                    'emptyTable' => __('No workflow groups found', 'wp-state-machine'),
-                    'info' => __('Showing _START_ to _END_ of _TOTAL_ entries', 'wp-state-machine'),
-                    'infoEmpty' => __('Showing 0 to 0 of 0 entries', 'wp-state-machine'),
-                    'infoFiltered' => __('(filtered from _MAX_ total entries)', 'wp-state-machine'),
-                    'lengthMenu' => __('Show _MENU_ entries', 'wp-state-machine'),
-                    'loadingRecords' => __('Loading...', 'wp-state-machine'),
-                    'processing' => __('Processing...', 'wp-state-machine'),
-                    'search' => __('Search:', 'wp-state-machine'),
-                    'zeroRecords' => __('No matching records found', 'wp-state-machine'),
-                    'paginate' => [
-                        'first' => __('First', 'wp-state-machine'),
-                        'last' => __('Last', 'wp-state-machine'),
-                        'next' => __('Next', 'wp-state-machine'),
-                        'previous' => __('Previous', 'wp-state-machine')
-                    ]
-                ]
+                'emptyTable' => __('No workflow groups found', 'wp-state-machine'),
+                'processing' => __('Processing...', 'wp-state-machine')
             ]
         ];
 
         wp_localize_script(
             'wp-state-machine-workflow-groups',
-            'wpStateMachineGroupsData',
+            'wpStateMachineWorkflowGroupsData',
             $localize_data
         );
     }
@@ -367,6 +451,85 @@ class WP_State_Machine_Dependencies {
         wp_localize_script(
             'wp-state-machine-settings',
             'wpStateMachineSettingsData',
+            $localize_data
+        );
+    }
+
+    /**
+     * Localize scripts for machines page
+     *
+     * @return void
+     */
+    private function localize_machines_scripts() {
+        $localize_data = [
+            'nonce' => wp_create_nonce('wp_state_machine_nonce'),
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'i18n' => [
+                'emptyTable' => __('No state machines found. Click "Add New State Machine" to create one.', 'wp-state-machine'),
+                'processing' => __('Loading...', 'wp-state-machine'),
+                'confirmDelete' => __('Are you sure you want to delete this state machine? This will also delete all associated states and transitions.', 'wp-state-machine'),
+                'addTitle' => __('Add New State Machine', 'wp-state-machine'),
+                'editTitle' => __('Edit State Machine', 'wp-state-machine'),
+                'active' => __('Active', 'wp-state-machine'),
+                'inactive' => __('Inactive', 'wp-state-machine'),
+            ]
+        ];
+
+        wp_localize_script(
+            'wp-state-machine-machines',
+            'wpStateMachineMachinesData',
+            $localize_data
+        );
+    }
+
+    /**
+     * Localize scripts for states page
+     *
+     * @return void
+     */
+    private function localize_states_scripts() {
+        $localize_data = [
+            'nonce' => wp_create_nonce('wp_state_machine_nonce'),
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'i18n' => [
+                'emptyTable' => __('No states found. Select a machine or click "Add New State".', 'wp-state-machine'),
+                'processing' => __('Loading...', 'wp-state-machine'),
+                'confirmDelete' => __('Are you sure you want to delete this state?', 'wp-state-machine'),
+                'addTitle' => __('Add New State', 'wp-state-machine'),
+                'editTitle' => __('Edit State', 'wp-state-machine'),
+            ]
+        ];
+
+        wp_localize_script(
+            'wp-state-machine-states',
+            'wpStateMachineStatesData',
+            $localize_data
+        );
+    }
+
+    /**
+     * Localize scripts for transitions page
+     *
+     * @return void
+     */
+    private function localize_transitions_scripts() {
+        $localize_data = [
+            'nonce' => wp_create_nonce('wp_state_machine_nonce'),
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'i18n' => [
+                'emptyTable' => __('No transitions found. Select a machine or click "Add New Transition".', 'wp-state-machine'),
+                'processing' => __('Loading...', 'wp-state-machine'),
+                'confirmDelete' => __('Are you sure you want to delete this transition?', 'wp-state-machine'),
+                'addTitle' => __('Add New Transition', 'wp-state-machine'),
+                'editTitle' => __('Edit Transition', 'wp-state-machine'),
+                'selectMachine' => __('Select machine first', 'wp-state-machine'),
+                'selectState' => __('Select state', 'wp-state-machine'),
+            ]
+        ];
+
+        wp_localize_script(
+            'wp-state-machine-transitions',
+            'wpStateMachineTransitionsData',
             $localize_data
         );
     }

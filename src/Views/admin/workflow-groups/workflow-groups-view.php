@@ -1,227 +1,252 @@
 <?php
 /**
- * Workflow Groups View
+ * Workflow Groups Admin View
  *
  * @package     WP_State_Machine
  * @subpackage  Views/Admin/WorkflowGroups
- * @version     1.0.0
+ * @version     1.0.1
  * @author      arisciwek
  *
  * Path: /wp-state-machine/src/Views/admin/workflow-groups/workflow-groups-view.php
  *
- * Description: Admin view for managing workflow groups.
- *              Displays groups in DataTable with CRUD operations.
- *              Supports drag-drop sorting (future enhancement).
- *
- *              CSS: /assets/css/workflow-groups.css
- *              JS:  /assets/js/workflow-groups.js
- *
- * Features:
- * - DataTables with server-side processing
- * - Add/Edit/Delete groups
- * - Active/Inactive toggle
- * - Machine count display
- * - Dashicon selector
- * - Responsive design
+ * Description: Admin interface for managing workflow groups.
+ *              Clean HTML only - no inline CSS or JavaScript.
+ *              Assets loaded via class-dependencies.php
  *
  * Changelog:
- * 1.0.0 - 2025-11-07 (TODO-6102 PRIORITAS #7)
- * - Initial creation for FASE 3
- * - DataTables integration
+ * 1.0.1 - 2025-11-08
+ * - Removed all inline styles
+ * - Clean HTML structure following machines/states pattern
+ * - Consistent modal naming
+ * - WordPress admin theme integration
+ *
+ * 1.0.0 - 2025-11-07
+ * - Initial creation
+ * - DataTable integration
  * - CRUD modals
- * - Machine count tracking
  */
 
 defined('ABSPATH') || exit;
+
+// Debug: Display current screen ID
+$screen = get_current_screen();
+if (defined('WP_DEBUG') && WP_DEBUG && $screen) {
+    error_log('Workflow Groups Screen ID: ' . $screen->id);
+}
 ?>
 
-<div class="wrap">
-    <h1 class="wp-heading-inline">
-        <span class="dashicons dashicons-networking" style="font-size: 28px; margin-right: 8px;"></span>
-        <?php echo esc_html__('Workflow Groups', 'wp-state-machine'); ?>
-    </h1>
-
+<div class="wrap wp-state-machine-admin">
+    <h1 class="wp-heading-inline"><?php _e('Workflow Groups', 'wp-state-machine'); ?></h1>
     <button type="button" class="page-title-action" id="btn-add-group">
-        <span class="dashicons dashicons-plus-alt" style="margin-top: 3px;"></span>
-        <?php echo esc_html__('Add New Group', 'wp-state-machine'); ?>
+        <?php _e('Add New Group', 'wp-state-machine'); ?>
     </button>
-
-    <p class="description">
-        <?php echo esc_html__('Organize state machines into logical groups for better management and clarity.', 'wp-state-machine'); ?>
-    </p>
-
     <hr class="wp-header-end">
 
+    <p class="description">
+        <?php _e('Organize state machines into logical groups for better management and clarity.', 'wp-state-machine'); ?>
+    </p>
+
     <!-- DataTable -->
-    <table id="workflow-groups-table" class="wp-list-table widefat fixed striped" style="margin-top: 20px;">
+    <table id="workflow-groups-table" class="wp-list-table widefat fixed striped">
         <thead>
             <tr>
-                <th style="width: 60px;"><?php echo esc_html__('ID', 'wp-state-machine'); ?></th>
-                <th style="width: 50px;"><?php echo esc_html__('Icon', 'wp-state-machine'); ?></th>
-                <th><?php echo esc_html__('Name', 'wp-state-machine'); ?></th>
-                <th><?php echo esc_html__('Slug', 'wp-state-machine'); ?></th>
-                <th style="width: 120px;"><?php echo esc_html__('Machines', 'wp-state-machine'); ?></th>
-                <th style="width: 100px;"><?php echo esc_html__('Sort Order', 'wp-state-machine'); ?></th>
-                <th style="width: 100px;"><?php echo esc_html__('Status', 'wp-state-machine'); ?></th>
-                <th style="width: 150px;"><?php echo esc_html__('Actions', 'wp-state-machine'); ?></th>
+                <th><?php _e('ID', 'wp-state-machine'); ?></th>
+                <th><?php _e('Icon', 'wp-state-machine'); ?></th>
+                <th><?php _e('Name', 'wp-state-machine'); ?></th>
+                <th><?php _e('Slug', 'wp-state-machine'); ?></th>
+                <th><?php _e('Machines', 'wp-state-machine'); ?></th>
+                <th><?php _e('Sort Order', 'wp-state-machine'); ?></th>
+                <th><?php _e('Status', 'wp-state-machine'); ?></th>
+                <th><?php _e('Actions', 'wp-state-machine'); ?></th>
             </tr>
         </thead>
         <tbody>
-            <tr>
-                <td colspan="8" class="dataTables_empty">
-                    <?php echo esc_html__('Loading...', 'wp-state-machine'); ?>
-                </td>
-            </tr>
         </tbody>
     </table>
-
 </div>
 
-<!-- Add/Edit Group Modal -->
-<div id="group-modal" class="sm-modal" style="display: none;">
-    <div class="sm-modal-content">
-        <div class="sm-modal-header">
-            <h2 id="modal-title"><?php echo esc_html__('Add Workflow Group', 'wp-state-machine'); ?></h2>
-            <button type="button" class="sm-modal-close">&times;</button>
+<!-- Create/Edit Modal -->
+<div id="group-modal" class="wp-state-machine-modal" style="display:none;">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title"><?php _e('Add New Workflow Group', 'wp-state-machine'); ?></h2>
+                <button type="button" class="modal-close" aria-label="<?php esc_attr_e('Close', 'wp-state-machine'); ?>">
+                    <span class="dashicons dashicons-no"></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="group-form">
+                    <input type="hidden" id="group-id" name="id" value="">
+
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">
+                                <label for="group-name"><?php _e('Group Name', 'wp-state-machine'); ?> <span class="required">*</span></label>
+                            </th>
+                            <td>
+                                <input type="text" id="group-name" name="name" class="regular-text" required>
+                                <p class="description"><?php _e('Display name for this group (e.g., "Order Management", "User Workflows")', 'wp-state-machine'); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="group-slug"><?php _e('Slug', 'wp-state-machine'); ?> <span class="required">*</span></label>
+                            </th>
+                            <td>
+                                <input type="text" id="group-slug" name="slug" class="regular-text" pattern="[a-z0-9_\-]+" readonly required>
+                                <p class="description">
+                                    <span class="dashicons dashicons-info"></span>
+                                    <?php _e('Auto-generated from name (cannot be changed after creation)', 'wp-state-machine'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="group-description"><?php _e('Description', 'wp-state-machine'); ?></label>
+                            </th>
+                            <td>
+                                <textarea id="group-description" name="description" class="large-text" rows="3"></textarea>
+                                <p class="description"><?php _e('Optional description of this group', 'wp-state-machine'); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="group-icon"><?php _e('Icon', 'wp-state-machine'); ?></label>
+                            </th>
+                            <td>
+                                <input type="text" id="group-icon" name="icon" class="regular-text" value="dashicons-networking">
+                                <p class="description">
+                                    <?php _e('Dashicon class (e.g., dashicons-networking, dashicons-chart-pie)', 'wp-state-machine'); ?>
+                                    <a href="https://developer.wordpress.org/resource/dashicons/" target="_blank">
+                                        <?php _e('Browse Dashicons', 'wp-state-machine'); ?>
+                                    </a>
+                                </p>
+                                <div class="icon-preview">
+                                    <span id="icon-preview-display" class="dashicons dashicons-networking"></span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="group-sort-order"><?php _e('Sort Order', 'wp-state-machine'); ?></label>
+                            </th>
+                            <td>
+                                <input type="number" id="group-sort-order" name="sort_order" class="small-text" value="0" min="0">
+                                <p class="description"><?php _e('Display order (lower numbers appear first)', 'wp-state-machine'); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="group-is-active"><?php _e('Status', 'wp-state-machine'); ?></label>
+                            </th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" id="group-is-active" name="is_active" value="1" checked>
+                                    <?php _e('This group is active and available for use', 'wp-state-machine'); ?>
+                                </label>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-secondary modal-close">
+                    <?php _e('Cancel', 'wp-state-machine'); ?>
+                </button>
+                <button type="button" class="button button-primary" id="btn-save-group">
+                    <?php _e('Save Group', 'wp-state-machine'); ?>
+                </button>
+            </div>
         </div>
-
-        <form id="group-form">
-            <input type="hidden" id="group-id" name="id" value="">
-
-            <div class="sm-form-row">
-                <label for="group-name">
-                    <?php echo esc_html__('Group Name', 'wp-state-machine'); ?>
-                    <span class="required">*</span>
-                </label>
-                <input type="text" id="group-name" name="name" class="regular-text" required>
-                <span class="error-message" id="error-name"></span>
-            </div>
-
-            <div class="sm-form-row">
-                <label for="group-slug">
-                    <?php echo esc_html__('Slug', 'wp-state-machine'); ?>
-                    <span class="required">*</span>
-                </label>
-                <input type="text" id="group-slug" name="slug" class="regular-text" required>
-                <span class="error-message" id="error-slug"></span>
-                <p class="description">
-                    <?php echo esc_html__('URL-friendly identifier (lowercase, numbers, hyphens only)', 'wp-state-machine'); ?>
-                </p>
-            </div>
-
-            <div class="sm-form-row">
-                <label for="group-description">
-                    <?php echo esc_html__('Description', 'wp-state-machine'); ?>
-                </label>
-                <textarea id="group-description" name="description" class="large-text" rows="3"></textarea>
-                <span class="error-message" id="error-description"></span>
-            </div>
-
-            <div class="sm-form-row">
-                <label for="group-icon">
-                    <?php echo esc_html__('Icon', 'wp-state-machine'); ?>
-                </label>
-                <input type="text" id="group-icon" name="icon" class="regular-text" value="dashicons-networking">
-                <span class="error-message" id="error-icon"></span>
-                <p class="description">
-                    <?php echo esc_html__('Dashicon class (e.g., dashicons-networking, dashicons-chart-pie)', 'wp-state-machine'); ?>
-                    <a href="https://developer.wordpress.org/resource/dashicons/" target="_blank">
-                        <?php echo esc_html__('Browse Dashicons', 'wp-state-machine'); ?>
-                    </a>
-                </p>
-            </div>
-
-            <div class="sm-form-row">
-                <label for="group-sort-order">
-                    <?php echo esc_html__('Sort Order', 'wp-state-machine'); ?>
-                </label>
-                <input type="number" id="group-sort-order" name="sort_order" class="small-text" value="0" min="0">
-                <span class="error-message" id="error-sort_order"></span>
-                <p class="description">
-                    <?php echo esc_html__('Lower numbers appear first', 'wp-state-machine'); ?>
-                </p>
-            </div>
-
-            <div class="sm-form-row">
-                <label>
-                    <input type="checkbox" id="group-is-active" name="is_active" value="1" checked>
-                    <?php echo esc_html__('Active', 'wp-state-machine'); ?>
-                </label>
-                <p class="description">
-                    <?php echo esc_html__('Inactive groups will not be shown in dropdown selections', 'wp-state-machine'); ?>
-                </p>
-            </div>
-
-            <div class="sm-modal-footer">
-                <button type="button" class="button" id="btn-cancel">
-                    <?php echo esc_html__('Cancel', 'wp-state-machine'); ?>
-                </button>
-                <button type="submit" class="button button-primary" id="btn-save">
-                    <span class="dashicons dashicons-yes" style="margin-top: 3px;"></span>
-                    <?php echo esc_html__('Save Group', 'wp-state-machine'); ?>
-                </button>
-            </div>
-        </form>
     </div>
 </div>
 
-<!-- View Group Details Modal -->
-<div id="view-group-modal" class="sm-modal" style="display: none;">
-    <div class="sm-modal-content">
-        <div class="sm-modal-header">
-            <h2><?php echo esc_html__('Group Details', 'wp-state-machine'); ?></h2>
-            <button type="button" class="sm-modal-close">&times;</button>
-        </div>
-
-        <div class="sm-modal-body">
-            <table class="form-table">
-                <tr>
-                    <th><?php echo esc_html__('ID', 'wp-state-machine'); ?>:</th>
-                    <td id="view-id"></td>
-                </tr>
-                <tr>
-                    <th><?php echo esc_html__('Icon', 'wp-state-machine'); ?>:</th>
-                    <td><span id="view-icon-preview" class="dashicons"></span> <span id="view-icon"></span></td>
-                </tr>
-                <tr>
-                    <th><?php echo esc_html__('Name', 'wp-state-machine'); ?>:</th>
-                    <td id="view-name"></td>
-                </tr>
-                <tr>
-                    <th><?php echo esc_html__('Slug', 'wp-state-machine'); ?>:</th>
-                    <td><code id="view-slug"></code></td>
-                </tr>
-                <tr>
-                    <th><?php echo esc_html__('Description', 'wp-state-machine'); ?>:</th>
-                    <td id="view-description"></td>
-                </tr>
-                <tr>
-                    <th><?php echo esc_html__('Sort Order', 'wp-state-machine'); ?>:</th>
-                    <td id="view-sort-order"></td>
-                </tr>
-                <tr>
-                    <th><?php echo esc_html__('Status', 'wp-state-machine'); ?>:</th>
-                    <td id="view-status"></td>
-                </tr>
-                <tr>
-                    <th><?php echo esc_html__('Assigned Machines', 'wp-state-machine'); ?>:</th>
-                    <td id="view-machines"></td>
-                </tr>
-                <tr>
-                    <th><?php echo esc_html__('Created', 'wp-state-machine'); ?>:</th>
-                    <td id="view-created"></td>
-                </tr>
-                <tr>
-                    <th><?php echo esc_html__('Modified', 'wp-state-machine'); ?>:</th>
-                    <td id="view-updated"></td>
-                </tr>
-            </table>
-        </div>
-
-        <div class="sm-modal-footer">
-            <button type="button" class="button" id="btn-close-view">
-                <?php echo esc_html__('Close', 'wp-state-machine'); ?>
-            </button>
+<!-- View Modal -->
+<div id="view-group-modal" class="wp-state-machine-modal" style="display:none;">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><?php _e('Workflow Group Details', 'wp-state-machine'); ?></h2>
+                <button type="button" class="modal-close" aria-label="<?php esc_attr_e('Close', 'wp-state-machine'); ?>">
+                    <span class="dashicons dashicons-no"></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <table class="form-table">
+                    <tr>
+                        <th><?php _e('ID', 'wp-state-machine'); ?>:</th>
+                        <td id="view-group-id"></td>
+                    </tr>
+                    <tr>
+                        <th><?php _e('Icon', 'wp-state-machine'); ?>:</th>
+                        <td>
+                            <span id="view-group-icon-preview" class="dashicons"></span>
+                            <code id="view-group-icon"></code>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php _e('Name', 'wp-state-machine'); ?>:</th>
+                        <td id="view-group-name"></td>
+                    </tr>
+                    <tr>
+                        <th><?php _e('Slug', 'wp-state-machine'); ?>:</th>
+                        <td><code id="view-group-slug"></code></td>
+                    </tr>
+                    <tr>
+                        <th><?php _e('Description', 'wp-state-machine'); ?>:</th>
+                        <td id="view-group-description"></td>
+                    </tr>
+                    <tr>
+                        <th><?php _e('Sort Order', 'wp-state-machine'); ?>:</th>
+                        <td id="view-group-sort-order"></td>
+                    </tr>
+                    <tr>
+                        <th><?php _e('Status', 'wp-state-machine'); ?>:</th>
+                        <td id="view-group-status"></td>
+                    </tr>
+                    <tr>
+                        <th><?php _e('Assigned Machines', 'wp-state-machine'); ?>:</th>
+                        <td id="view-group-machines"></td>
+                    </tr>
+                    <tr>
+                        <th><?php _e('Created', 'wp-state-machine'); ?>:</th>
+                        <td id="view-group-created"></td>
+                    </tr>
+                    <tr>
+                        <th><?php _e('Updated', 'wp-state-machine'); ?>:</th>
+                        <td id="view-group-updated"></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-secondary modal-close">
+                    <?php _e('Close', 'wp-state-machine'); ?>
+                </button>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Assets (workflow-groups.css and workflow-groups.js) are loaded via class-dependencies.php -->
+<!-- JavaScript data is localized via wpStateMachineWorkflowGroupsData -->
+
+<!-- Debug: Inline test script -->
+<script>
+jQuery(document).ready(function($) {
+    console.log('=== WORKFLOW GROUPS DEBUG ===');
+    console.log('jQuery loaded:', typeof $ !== 'undefined');
+    console.log('DataTables loaded:', typeof $.fn.DataTable !== 'undefined');
+    console.log('Localized data loaded:', typeof wpStateMachineWorkflowGroupsData !== 'undefined');
+    console.log('Data:', typeof wpStateMachineWorkflowGroupsData !== 'undefined' ? wpStateMachineWorkflowGroupsData : 'NOT FOUND');
+    console.log('Add button exists:', $('#btn-add-group').length);
+    console.log('Modal exists:', $('#group-modal').length);
+    console.log('Table exists:', $('#workflow-groups-table').length);
+
+    // Simple fallback if main script doesn't load
+    if (typeof wpStateMachineWorkflowGroupsData === 'undefined') {
+        console.error('wpStateMachineWorkflowGroupsData NOT LOADED! Check class-dependencies.php');
+        alert('JavaScript configuration error. Check console for details.');
+    }
+});
+</script>

@@ -88,7 +88,7 @@ class TransitionController {
         }
 
         // Load view
-        $view_path = WP_STATE_MACHINE_PATH . 'src/Views/admin/transitions/index.php';
+        $view_path = WP_STATE_MACHINE_PATH . 'src/Views/admin/transitions/transitions-view.php';
         if (file_exists($view_path)) {
             include $view_path;
         } else {
@@ -351,7 +351,9 @@ class TransitionController {
 
             if ($transition_id) {
                 // Clear cache
+                $this->cache->invalidateDataTableCache('transitions_list');
                 $this->cache->delete('transitions_list');
+                $this->cache->delete('transitions_count', 'total');
                 $this->cache->delete('transition', $transition_id);
                 $this->cache->delete('transitions_by_machine', $data['machine_id']);
 
@@ -425,7 +427,9 @@ class TransitionController {
 
             if ($result) {
                 // Clear cache
+                $this->cache->invalidateDataTableCache('transitions_list');
                 $this->cache->delete('transitions_list');
+                $this->cache->delete('transitions_count', 'total');
                 $this->cache->delete('transition', $id);
                 $this->cache->delete('transitions_by_machine', $current->machine_id);
 
@@ -485,7 +489,9 @@ class TransitionController {
 
             if ($result) {
                 // Clear cache
+                $this->cache->invalidateDataTableCache('transitions_list');
                 $this->cache->delete('transitions_list');
+                $this->cache->delete('transitions_count', 'total');
                 $this->cache->delete('transition', $id);
                 $this->cache->delete('transitions_by_machine', $transition->machine_id);
 

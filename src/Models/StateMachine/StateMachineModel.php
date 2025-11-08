@@ -227,14 +227,22 @@ class StateMachineModel extends AbstractStateMachineModel {
         $sql = "SELECT sm.*,
                        wg.name as workflow_group_name,
                        wg.label as workflow_group_label
-                FROM {$this->table_name} sm
+                FROM {$this->getTableName()} sm
                 LEFT JOIN {$wpdb->prefix}app_sm_workflow_groups wg ON sm.workflow_group_id = wg.id";
+
+        // Build WHERE conditions
+        $where_conditions = [];
+
+        // Add workflow group filter
+        if (isset($params['workflow_group_id']) && $params['workflow_group_id'] !== null) {
+            $where_conditions[] = $wpdb->prepare("sm.workflow_group_id = %d", $params['workflow_group_id']);
+        }
 
         // Add search condition
         if (!empty($search)) {
             $search_term = '%' . $wpdb->esc_like($search) . '%';
-            $sql .= $wpdb->prepare(
-                " WHERE (sm.name LIKE %s
+            $where_conditions[] = $wpdb->prepare(
+                "(sm.name LIKE %s
                         OR sm.slug LIKE %s
                         OR sm.plugin_slug LIKE %s
                         OR sm.entity_type LIKE %s
@@ -247,6 +255,11 @@ class StateMachineModel extends AbstractStateMachineModel {
                 $search_term,
                 $search_term
             );
+        }
+
+        // Combine WHERE conditions
+        if (!empty($where_conditions)) {
+            $sql .= " WHERE " . implode(" AND ", $where_conditions);
         }
 
         // Add ordering
@@ -272,7 +285,7 @@ class StateMachineModel extends AbstractStateMachineModel {
             return (int) $cached_count;
         }
 
-        $count = $wpdb->get_var("SELECT COUNT(*) FROM {$this->table_name}");
+        $count = $wpdb->get_var("SELECT COUNT(*) FROM {$this->getTableName()}");
 
         // Cache the count
         $this->cache->set('state_machines_count', $count, 300, 'total');
@@ -284,34 +297,51 @@ class StateMachineModel extends AbstractStateMachineModel {
      * Get filtered count for search
      *
      * @param string $search Search term
+     * @param int|null $workflow_group_id Workflow group filter
      * @return int Filtered count
      */
-    public function getFilteredCount(string $search): int {
+    public function getFilteredCount(string $search = '', ?int $workflow_group_id = null): int {
         global $wpdb;
 
-        if (empty($search)) {
+        if (empty($search) && !$workflow_group_id) {
             return $this->getTotalCount();
         }
 
-        $search_term = '%' . $wpdb->esc_like($search) . '%';
+        $sql = "SELECT COUNT(*)
+                FROM {$this->getTableName()} sm
+                LEFT JOIN {$wpdb->prefix}app_sm_workflow_groups wg ON sm.workflow_group_id = wg.id";
 
-        $sql = $wpdb->prepare(
-            "SELECT COUNT(*)
-             FROM {$this->table_name} sm
-             LEFT JOIN {$wpdb->prefix}app_sm_workflow_groups wg ON sm.workflow_group_id = wg.id
-             WHERE (sm.name LIKE %s
-                    OR sm.slug LIKE %s
-                    OR sm.plugin_slug LIKE %s
-                    OR sm.entity_type LIKE %s
-                    OR sm.description LIKE %s
-                    OR wg.name LIKE %s)",
-            $search_term,
-            $search_term,
-            $search_term,
-            $search_term,
-            $search_term,
-            $search_term
-        );
+        // Build WHERE conditions
+        $where_conditions = [];
+
+        // Add workflow group filter
+        if ($workflow_group_id !== null) {
+            $where_conditions[] = $wpdb->prepare("sm.workflow_group_id = %d", $workflow_group_id);
+        }
+
+        // Add search condition
+        if (!empty($search)) {
+            $search_term = '%' . $wpdb->esc_like($search) . '%';
+            $where_conditions[] = $wpdb->prepare(
+                "(sm.name LIKE %s
+                        OR sm.slug LIKE %s
+                        OR sm.plugin_slug LIKE %s
+                        OR sm.entity_type LIKE %s
+                        OR sm.description LIKE %s
+                        OR wg.name LIKE %s)",
+                $search_term,
+                $search_term,
+                $search_term,
+                $search_term,
+                $search_term,
+                $search_term
+            );
+        }
+
+        // Combine WHERE conditions
+        if (!empty($where_conditions)) {
+            $sql .= " WHERE " . implode(" AND ", $where_conditions);
+        }
 
         return (int) $wpdb->get_var($sql);
     }
@@ -329,7 +359,7 @@ class StateMachineModel extends AbstractStateMachineModel {
             "SELECT sm.*,
                     wg.name as workflow_group_name,
                     wg.label as workflow_group_label
-             FROM {$this->table_name} sm
+             FROM {$this->getTableName()} sm
              LEFT JOIN {$wpdb->prefix}app_sm_workflow_groups wg ON sm.workflow_group_id = wg.id
              WHERE sm.plugin_slug = %s
              ORDER BY sm.created_at DESC",
@@ -349,7 +379,7 @@ class StateMachineModel extends AbstractStateMachineModel {
         global $wpdb;
 
         $sql = $wpdb->prepare(
-            "SELECT * FROM {$this->table_name}
+            "SELECT * FROM {$this->getTableName()}
              WHERE workflow_group_id = %d
              ORDER BY name ASC",
             $workflow_group_id
@@ -369,7 +399,7 @@ class StateMachineModel extends AbstractStateMachineModel {
         global $wpdb;
 
         $sql = $wpdb->prepare(
-            "SELECT COUNT(*) FROM {$this->table_name} WHERE slug = %s",
+            "SELECT COUNT(*) FROM {$this->getTableName()} WHERE slug = %s",
             $slug
         );
 
@@ -399,7 +429,7 @@ class StateMachineModel extends AbstractStateMachineModel {
         $sql = "SELECT sm.*,
                        wg.name as workflow_group_name,
                        wg.label as workflow_group_label
-                FROM {$this->table_name} sm
+                FROM {$this->getTableName()} sm
                 LEFT JOIN {$wpdb->prefix}app_sm_workflow_groups wg ON sm.workflow_group_id = wg.id
                 WHERE sm.is_active = 1
                 ORDER BY sm.name ASC";

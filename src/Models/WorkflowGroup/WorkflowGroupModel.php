@@ -195,7 +195,7 @@ class WorkflowGroupModel extends AbstractStateMachineModel {
         // Ordering
         $order_column = $params['order_column'] ?? 'sort_order';
         $order_dir = strtoupper($params['order_dir'] ?? 'ASC') === 'DESC' ? 'DESC' : 'ASC';
-        $query .= $wpdb->prepare(" ORDER BY g.{$order_column} {$order_dir}");
+        $query .= " ORDER BY g.{$order_column} {$order_dir}";
 
         // Pagination
         if (isset($params['length']) && $params['length'] > 0) {
@@ -229,7 +229,7 @@ class WorkflowGroupModel extends AbstractStateMachineModel {
         $cache_key = 'active_groups';
 
         // Try cache
-        $cached = $this->cache_manager->get($cache_key);
+        $cached = $this->cache->get('workflow_groups_active', $cache_key);
         if ($cached !== false) {
             return $cached;
         }
@@ -243,7 +243,7 @@ class WorkflowGroupModel extends AbstractStateMachineModel {
         );
 
         // Cache for 1 hour
-        $this->cache_manager->set($cache_key, $results, 3600);
+        $this->cache->set($cache_key, $results, 3600);
 
         return $results;
     }
@@ -285,7 +285,7 @@ class WorkflowGroupModel extends AbstractStateMachineModel {
             $wpdb->query('COMMIT');
 
             // Clear cache
-            $this->cache_manager->flush();
+            $this->cache->flush();
 
             return true;
         } catch (\Exception $e) {
@@ -306,13 +306,17 @@ class WorkflowGroupModel extends AbstractStateMachineModel {
         global $wpdb;
         $table = $this->getTableName();
 
-        $query = $wpdb->prepare(
-            "SELECT COUNT(*) FROM {$table} WHERE slug = %s",
-            $slug
-        );
-
         if ($exclude_id) {
-            $query .= $wpdb->prepare(" AND id != %d", $exclude_id);
+            $query = $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table} WHERE slug = %s AND id != %d",
+                $slug,
+                $exclude_id
+            );
+        } else {
+            $query = $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table} WHERE slug = %s",
+                $slug
+            );
         }
 
         return $wpdb->get_var($query) > 0;
@@ -357,7 +361,7 @@ class WorkflowGroupModel extends AbstractStateMachineModel {
         );
 
         if ($result !== false) {
-            $this->cache_manager->delete($id);
+            $this->cache->delete($id);
         }
 
         return $result !== false;

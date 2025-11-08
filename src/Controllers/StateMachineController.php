@@ -87,7 +87,7 @@ class StateMachineController {
         }
 
         // Load view
-        $view_path = WP_STATE_MACHINE_PATH . 'src/Views/admin/state-machines/index.php';
+        $view_path = WP_STATE_MACHINE_PATH . 'src/Views/admin/state-machines/machines-view.php';
         if (file_exists($view_path)) {
             include $view_path;
         } else {
@@ -128,14 +128,15 @@ class StateMachineController {
             $columns = ['id', 'name', 'slug', 'plugin_slug', 'entity_type', 'created_at'];
             $order_column = isset($columns[$order_column_index]) ? $columns[$order_column_index] : 'id';
 
-            // Build cache key
+            // Build cache key for DataTable response
             $cache_key = sprintf(
-                'datatable_%d_%d_%s_%s_%s',
+                'datatable_%d_%d_%s_%s_%s_%s',
                 $start,
                 $length,
                 $search,
                 $order_column,
-                $order_dir
+                $order_dir,
+                $workflow_group_id ?? 'all'
             );
 
             // Try to get from cache
@@ -145,18 +146,26 @@ class StateMachineController {
                 return;
             }
 
+            // Get workflow group filter
+            $workflow_group_id = isset($_POST['workflow_group_id']) && $_POST['workflow_group_id'] !== ''
+                ? intval($_POST['workflow_group_id'])
+                : null;
+
             // Get data from model
             $params = [
                 'start' => $start,
                 'length' => $length,
                 'search' => $search,
                 'order_by' => $order_column,
-                'order_dir' => $order_dir
+                'order_dir' => $order_dir,
+                'workflow_group_id' => $workflow_group_id
             ];
 
             $data = $this->model->getForDataTable($params);
             $total_records = $this->model->getTotalCount();
-            $filtered_records = !empty($search) ? $this->model->getFilteredCount($search) : $total_records;
+            $filtered_records = (!empty($search) || $workflow_group_id)
+                ? $this->model->getFilteredCount($search, $workflow_group_id)
+                : $total_records;
 
             // Format data for DataTables
             $formatted_data = [];
@@ -165,10 +174,9 @@ class StateMachineController {
                     'id' => $machine->id,
                     'name' => esc_html($machine->name),
                     'slug' => esc_html($machine->slug),
-                    'plugin_slug' => esc_html($machine->plugin_slug),
-                    'entity_type' => esc_html($machine->entity_type),
-                    'workflow_group' => !empty($machine->workflow_group_name) ? esc_html($machine->workflow_group_name) : '-',
-                    'is_active' => $machine->is_active ? __('Active', 'wp-state-machine') : __('Inactive', 'wp-state-machine'),
+                    'description' => !empty($machine->description) ? esc_html($machine->description) : '-',
+                    'workflow_group_name' => !empty($machine->workflow_group_name) ? esc_html($machine->workflow_group_name) : '-',
+                    'is_active' => $machine->is_active,
                     'created_at' => mysql2date(get_option('date_format'), $machine->created_at),
                     'actions' => $this->getActionButtons($machine)
                 ];
@@ -181,7 +189,7 @@ class StateMachineController {
                 'data' => $formatted_data
             ];
 
-            // Cache the result
+            // Cache the result (5 minutes expiry for DataTable responses)
             $this->cache->set('state_machines_list', $response, 300, $cache_key);
 
             wp_send_json($response);
@@ -217,7 +225,7 @@ class StateMachineController {
                 'slug' => isset($_POST['slug']) ? sanitize_title($_POST['slug']) : '',
                 'plugin_slug' => isset($_POST['plugin_slug']) ? sanitize_text_field($_POST['plugin_slug']) : '',
                 'entity_type' => isset($_POST['entity_type']) ? sanitize_text_field($_POST['entity_type']) : '',
-                'workflow_group_id' => isset($_POST['workflow_group_id']) ? intval($_POST['workflow_group_id']) : null,
+                'workflow_group_id' => !empty($_POST['workflow_group_id']) ? intval($_POST['workflow_group_id']) : null,
                 'description' => isset($_POST['description']) ? sanitize_textarea_field($_POST['description']) : '',
                 'is_active' => isset($_POST['is_active']) ? (bool) $_POST['is_active'] : true
             ];
@@ -235,8 +243,10 @@ class StateMachineController {
             $machine_id = $this->model->create($data);
 
             if ($machine_id) {
-                // Clear cache
+                // Clear ALL cache variations
+                $this->cache->invalidateDataTableCache('state_machines_list');
                 $this->cache->delete('state_machines_list');
+                $this->cache->delete('state_machines_count', 'total');
                 $this->cache->delete('state_machine', $machine_id);
 
                 wp_send_json_success([
@@ -289,7 +299,7 @@ class StateMachineController {
                 'slug' => isset($_POST['slug']) ? sanitize_title($_POST['slug']) : '',
                 'plugin_slug' => isset($_POST['plugin_slug']) ? sanitize_text_field($_POST['plugin_slug']) : '',
                 'entity_type' => isset($_POST['entity_type']) ? sanitize_text_field($_POST['entity_type']) : '',
-                'workflow_group_id' => isset($_POST['workflow_group_id']) ? intval($_POST['workflow_group_id']) : null,
+                'workflow_group_id' => !empty($_POST['workflow_group_id']) ? intval($_POST['workflow_group_id']) : null,
                 'description' => isset($_POST['description']) ? sanitize_textarea_field($_POST['description']) : '',
                 'is_active' => isset($_POST['is_active']) ? (bool) $_POST['is_active'] : true
             ];
@@ -307,8 +317,10 @@ class StateMachineController {
             $result = $this->model->update($id, $data);
 
             if ($result) {
-                // Clear cache
+                // Clear ALL cache variations
+                $this->cache->invalidateDataTableCache('state_machines_list');
                 $this->cache->delete('state_machines_list');
+                $this->cache->delete('state_machines_count', 'total');
                 $this->cache->delete('state_machine', $id);
 
                 wp_send_json_success([
@@ -358,8 +370,10 @@ class StateMachineController {
             $result = $this->model->delete($id);
 
             if ($result) {
-                // Clear cache
+                // Clear ALL cache variations
+                $this->cache->invalidateDataTableCache('state_machines_list');
                 $this->cache->delete('state_machines_list');
+                $this->cache->delete('state_machines_count', 'total');
                 $this->cache->delete('state_machine', $id);
 
                 wp_send_json_success([

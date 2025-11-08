@@ -1,0 +1,98 @@
+/**
+ * Transitions Admin CSS
+ *
+ * @package     WP_State_Machine
+ * @subpackage  Assets/CSS
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Description: Styling for Transitions admin page
+ *              Extracted from transitions view for clean architecture
+ *
+ * Changelog:
+ * 1.0.0 - 2025-11-08
+ * - Extracted from transitions-view.php
+ */
+
+/* Modal Overlay */
+.wp-state-machine-modal {
+    position: fixed;
+    z-index: 100000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+}
+
+/* Modal Dialog */
+.modal-dialog {
+    background-color: #fefefe;
+    margin: 5% auto;
+    width: 90%;
+    max-width: 700px;
+    border-radius: 4px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+/* Modal Header */
+.modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.3em;
+}
+
+/* Modal Close Button */
+.modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font-size: 20px;
+    line-height: 1;
+    color: #666;
+}
+
+.modal-close:hover {
+    color: #000;
+}
+
+/* Modal Body */
+.modal-body {
+    padding: 20px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+/* Modal Footer */
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #ddd;
+    text-align: right;
+}
+
+.modal-footer .button {
+    margin-left: 10px;
+}
+
+/* Required Field Indicator */
+.required {
+    color: #dc3232;
+}
+
+/* View Metadata Styling */
+#view-transition-metadata {
+    background: #f5f5f5;
+    padding: 10px;
+    border-radius: 3px;
+    max-height: 200px;
+    overflow: auto;
+}

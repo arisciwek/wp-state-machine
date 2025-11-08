@@ -19,12 +19,22 @@
 - [x] Update plugin main file untuk pass controller
 - [x] Test CRUD operations via UI
 - [x] Verify DataTable working
+- [x] Create machines-view.php (clean view, no inline CSS/JS)
+- [x] Extract CSS to /assets/css/machines.css
+- [x] Extract JS to /assets/js/machines.js
+- [x] Move asset enqueuing to class-dependencies.php
 
-**Files:**
+**Files Created:**
+- `/src/Views/admin/state-machines/machines-view.php` (v1.0.0)
+- `/assets/css/machines.css` (v1.0.0)
+- `/assets/js/machines.js` (v1.0.0)
+
+**Files Updated:**
 - `/src/Controllers/MenuManager.php` (line 153-163)
 - `/wp-state-machine.php`
+- `/includes/class-dependencies.php` - Added machines assets enqueuing
 
-**Result:** Bisa CRUD state machines via UI
+**Result:** Bisa CRUD state machines via UI dengan workflow group integration
 
 ---
 
@@ -39,10 +49,13 @@
 - [x] Implement DataTable AJAX handler
 - [x] Implement CRUD operations (create, update, delete, show)
 - [x] Create StateValidator.php
-- [x] Create view file: /src/Views/admin/states/index.php
+- [x] Create states-view.php (clean view, no inline CSS/JS)
+- [x] Extract CSS to /assets/css/states.css
+- [x] Extract JS to /assets/js/states.js
 - [x] Update MenuManager untuk render states page
 - [x] Add filtering by machine_id
 - [x] Test with sample machine data
+- [x] Move asset enqueuing to class-dependencies.php
 
 **Pattern Reference:**
 - Follow StateMachineController pattern exactly
@@ -50,10 +63,16 @@
 - Integrate with StateMachineCacheManager
 - Permission checking with custom capabilities
 
-**Files to Create:**
-- `/src/Controllers/StateController.php`
-- `/src/Validators/StateValidator.php`
-- `/src/Views/admin/states/index.php`
+**Files Created:**
+- `/src/Controllers/StateController.php` (v1.0.0)
+- `/src/Validators/StateValidator.php` (v1.0.0)
+- `/src/Views/admin/states/states-view.php` (v1.0.0)
+- `/assets/css/states.css` (v1.0.0)
+- `/assets/js/states.js` (v1.0.0)
+
+**Files Updated:**
+- `/src/Controllers/MenuManager.php` - Added StateController injection
+- `/includes/class-dependencies.php` - Added states assets enqueuing
 
 **Result:** Bisa CRUD states untuk setiap machine
 
@@ -71,7 +90,10 @@
 - [x] Implement CRUD operations
 - [x] Create TransitionValidator.php
 - [x] Validate no duplicate transitions (from→to)
-- [x] Create view file: /src/Views/admin/transitions/index.php
+- [x] Create transitions-view.php (clean view, no inline CSS/JS)
+- [x] Extract CSS to /assets/css/transitions.css
+- [x] Extract JS to /assets/js/transitions.js
+- [x] Move asset enqueuing to class-dependencies.php
 - [ ] Add sort order drag-drop functionality (optional - future enhancement)
 - [x] Test transition creation between states
 
@@ -86,10 +108,16 @@
 - Support guard_class field
 - Support metadata JSON field
 
-**Files to Create:**
-- `/src/Controllers/TransitionController.php`
-- `/src/Validators/TransitionValidator.php`
-- `/src/Views/admin/transitions/index.php`
+**Files Created:**
+- `/src/Controllers/TransitionController.php` (v1.0.0)
+- `/src/Validators/TransitionValidator.php` (v1.0.0)
+- `/src/Views/admin/transitions/transitions-view.php` (v1.0.0)
+- `/assets/css/transitions.css` (v1.0.0)
+- `/assets/js/transitions.js` (v1.0.0)
+
+**Files Updated:**
+- `/src/Controllers/MenuManager.php` - Added TransitionController injection
+- `/includes/class-dependencies.php` - Added transitions assets enqueuing
 
 **Result:** Setup workflow lengkap (machines → states → transitions)
 
@@ -290,19 +318,71 @@ do_action('wp_state_machine_transition_failed', $entity, $transition, $error);
 
 **Result:** Complete workflow groups management dengan CRUD, filtering, dan machine tracking
 
+**Bug Fixes (2025-11-08):**
+- [x] Fixed WorkflowGroupModel cache manager property error
+  - Line 246: `$this->cache_manager->set()` → `$this->cache->set()`
+  - Line 288: `$this->cache_manager->flush()` → `$this->cache->flush()`
+  - Line 364: `$this->cache_manager->delete()` → `$this->cache->delete()`
+- [x] Fixed State Machines not displaying workflow group data
+  - Updated StateMachineController to handle workflow_group_id filter
+  - Updated StateMachineModel::getForDataTable() to support workflow group filtering
+  - Updated StateMachineModel::getFilteredCount() to include workflow_group_id parameter
+  - Fixed cache key to include workflow group filter
+- [x] Verified all PHP syntax (no errors)
+
 ---
 
-### PRIORITAS #8: Settings Controller
+### ⭐ PRIORITAS #8: Settings Controller
 **Effort:** 2-3 jam
-**Status:** PENDING
+**Status:** ✅ COMPLETED
+**Dependency:** FASE 1 & 2 Complete
+**Impact:** Complete plugin configuration interface
 
 **Tasks:**
-- [ ] Create SettingsController.php
-- [ ] General settings tab
-- [ ] Permission management tab
-- [ ] Cache settings tab
-- [ ] Database cleanup options
-- [ ] Update MenuManager->renderSettingsPage()
+- [x] Create SettingsController.php with multi-tab interface
+- [x] General settings tab (logging, notifications)
+- [x] Permission management tab (capabilities configuration)
+- [x] Cache settings tab (cache control, clear cache button)
+- [x] Database cleanup options (manual cleanup, statistics viewer)
+- [x] Create settings-view.php (clean view, no inline CSS/JS)
+- [x] Extract CSS to /assets/css/settings.css
+- [x] Extract JS to /assets/js/settings.js
+- [x] Update MenuManager->renderSettingsPage()
+- [x] Move asset enqueuing to class-dependencies.php
+- [x] Add AJAX handlers for all operations
+- [x] Implement WordPress Settings API integration
+
+**Special Features:**
+- Multi-tab interface (General, Permissions, Cache, Database)
+- Custom toggle switch component
+- Real-time settings save via AJAX
+- Database statistics viewer with cards display
+- Manual cache clearing
+- Log cleanup with confirmation
+- Toast notifications for user feedback
+- Output buffer cleaning to prevent JSON errors
+- Error suppression for clean AJAX responses
+- WordPress admin color scheme support
+
+**Files Created:**
+- `/src/Controllers/SettingsController.php` (v1.0.0)
+- `/src/Views/admin/settings/settings-view.php` (v1.0.0)
+- `/assets/css/settings.css` (v1.0.0)
+- `/assets/js/settings.js` (v1.0.0)
+
+**Files Updated:**
+- `/includes/class-dependencies.php` (v1.0.3) - Added settings assets
+- `/src/Controllers/MenuManager.php` - Added SettingsController injection
+- `/wp-state-machine.php` - Instantiate SettingsController
+- `/wp-config.php` - Enabled WP_DEBUG for development
+
+**Settings Managed:**
+- **General**: enable_logging, log_retention_days, enable_notifications, notification_email
+- **Permissions**: allow_plugin_manage_permissions, default_view_capability, default_edit_capability
+- **Cache**: enable_cache, cache_expiration
+- **Database**: auto_cleanup_enabled, cleanup_frequency, keep_logs_days
+
+**Result:** Complete settings management dengan CRUD, caching, dan database maintenance tools
 
 ---
 
@@ -383,24 +463,35 @@ FASE 3 (Parallel):
 - ✅ PRIORITAS #6: Logs Viewer (LogsController with DataTables, filtering, export)
 - ✅ **TODO-6104:** Per-Plugin Log Tables Implementation
 - ✅ PRIORITAS #7: Workflow Groups Controller (Complete groups management)
-- ✅ **FASE 3 EXTRAS:** Partially Complete (2 of 3 done)
+- ✅ PRIORITAS #8: Settings Controller (Complete plugin configuration)
+- ✅ **FASE 3 EXTRAS:** COMPLETE (All 3 done)
 
 **Bonus Deliverables:**
 - ✅ 3x YML Workflow Samplers (blog-post, support-ticket, order)
 - ✅ Clean MVC architecture dengan separated assets
-- ✅ Centralized asset management (class-dependencies.php)
+- ✅ Centralized asset management (class-dependencies.php v1.0.3)
+- ✅ Multi-tab settings interface with AJAX
+- ✅ Database statistics viewer
+- ✅ Custom toggle switch component
 
 **In Progress:**
 - None
 
 **Next Step:**
-- **RECOMMENDED:** Continue to PRIORITAS #8: Settings Controller
-  - Create SettingsController for plugin configuration
-  - Build admin UI for settings management
-  - General settings, permissions, cache options
-- **ALTERNATIVE:** Start integration testing with existing features
-- **ALTERNATIVE:** Create plugin integration examples
-- **ALTERNATIVE:** Begin comprehensive documentation
+- **RECOMMENDED:** Integration Testing
+  - Test complete workflow: Create Machine → States → Transitions → Execute
+  - Test with real-world example (e.g., wp-rfq integration)
+  - Verify all CRUD operations work end-to-end
+  - Test permission system across all controllers
+- **ALTERNATIVE:** Documentation & Examples
+  - Create comprehensive usage documentation
+  - Write integration guide for plugin developers
+  - Document all hooks and filters available
+- **ALTERNATIVE:** Advanced Features
+  - Visual workflow diagram viewer
+  - Bulk import/export for machines
+  - Advanced reporting dashboard
+  - Scheduled transition automation
 
 ---
 
@@ -425,23 +516,45 @@ FASE 3 (Parallel):
 - StateController: `/src/Controllers/StateController.php`
 - TransitionController: `/src/Controllers/TransitionController.php`
 - LogsController: `/src/Controllers/LogsController.php` (v1.0.1)
+- WorkflowGroupController: `/src/Controllers/WorkflowGroupController.php` (v1.0.0)
+- SettingsController: `/src/Controllers/SettingsController.php` (v1.0.0)
 
 ### Implemented Validators:
 - StateMachineValidator: `/src/Validators/StateMachineValidator.php`
 - StateValidator: `/src/Validators/StateValidator.php`
 - TransitionValidator: `/src/Validators/TransitionValidator.php`
+- WorkflowGroupValidator: `/src/Validators/WorkflowGroupValidator.php` (v1.0.0)
 
 ### Models:
 - TransitionModel: `/src/Models/Transition/TransitionModel.php:270` (getAvailableTransitions)
 - StateModel: `/src/Models/State/StateModel.php`
 - StateMachineModel: `/src/Models/StateMachine/StateMachineModel.php`
 - TransitionLogModel: `/src/Models/TransitionLog/TransitionLogModel.php`
+- WorkflowGroupModel: `/src/Models/WorkflowGroup/WorkflowGroupModel.php` (v1.0.0)
 
 ### Views:
-- Machines: `/src/Views/admin/state-machines/index.php`
-- States: `/src/Views/admin/states/index.php`
-- Transitions: `/src/Views/admin/transitions/index.php`
+- Machines: `/src/Views/admin/state-machines/machines-view.php` (v1.0.0)
+- States: `/src/Views/admin/states/states-view.php` (v1.0.0)
+- Transitions: `/src/Views/admin/transitions/transitions-view.php` (v1.0.0)
 - Logs: `/src/Views/admin/logs/transition-logs-view.php` (v1.0.1)
+- Workflow Groups: `/src/Views/admin/workflow-groups/workflow-groups-view.php` (v1.0.0)
+- Settings: `/src/Views/admin/settings/settings-view.php` (v1.0.0)
+
+### Assets:
+- CSS:
+  - `/assets/css/machines.css` (v1.0.0)
+  - `/assets/css/states.css` (v1.0.0)
+  - `/assets/css/transitions.css` (v1.0.0)
+  - `/assets/css/transition-logs.css` (v1.0.0)
+  - `/assets/css/workflow-groups.css` (v1.0.0)
+  - `/assets/css/settings.css` (v1.0.0)
+- JavaScript:
+  - `/assets/js/machines.js` (v1.0.0)
+  - `/assets/js/states.js` (v1.0.0)
+  - `/assets/js/transitions.js` (v1.0.0)
+  - `/assets/js/transition-logs.js` (v1.0.0)
+  - `/assets/js/workflow-groups.js` (v1.0.0)
+  - `/assets/js/settings.js` (v1.0.0)
 
 ### Engine:
 - StateMachineEngine: `/src/Engine/StateMachineEngine.php`

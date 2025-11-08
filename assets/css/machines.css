@@ -1,30 +1,23 @@
 /**
- * Workflow Groups Admin CSS
+ * State Machines Admin CSS
  *
  * @package     WP_State_Machine
  * @subpackage  Assets/CSS
- * @version     1.0.1
+ * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-state-machine/assets/css/workflow-groups.css
+ * Path: /wp-state-machine/assets/css/machines.css
  *
- * Description: Styling for workflow groups admin page.
+ * Description: Styling for state machines admin page.
  *              Includes modal dialogs, DataTable customizations,
  *              and WordPress admin theme integration.
- *              Follows machines/states/transitions pattern.
  *
  * Changelog:
- * 1.0.1 - 2025-11-08
- * - Updated to match machines/states/transitions CSS pattern
- * - Changed .sm-modal to .wp-state-machine-modal for consistency
- * - Added readonly field styling
- * - Improved icon preview styling
- * - WordPress admin theme integration
- *
- * 1.0.0 - 2025-11-07
+ * 1.0.0 - 2025-11-08
  * - Initial creation
- * - Modal and form styles
- * - Status badge styles
+ * - Modal styling
+ * - Form elements
+ * - Button states
  */
 
 /* Modal Overlay */
@@ -101,6 +94,20 @@
     color: #dc3232;
 }
 
+/* Form Table */
+.modal-body .form-table th {
+    width: 150px;
+}
+
+.modal-body .form-table td {
+    padding: 15px 10px;
+}
+
+/* Workflow Group Filter */
+.tablenav.top {
+    margin-bottom: 10px;
+}
+
 /* Readonly/Auto-generated Fields */
 input[readonly],
 input[readonly]:focus {
@@ -116,60 +123,11 @@ input[readonly].has-value {
     font-size: 13px;
 }
 
-/* Icon Preview */
-.icon-preview {
-    margin-top: 10px;
-    padding: 10px;
-    background: #f0f0f1;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-#icon-preview-display {
-    font-size: 32px;
-    vertical-align: middle;
+/* Description with icon */
+.description .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    vertical-align: text-bottom;
     color: #2271b1;
-}
-
-/* View Modal Icon */
-#view-group-icon-preview {
-    font-size: 24px;
-    margin-right: 8px;
-    vertical-align: middle;
-    color: #2271b1;
-}
-
-/* Machine Count Badge */
-.machine-count-badge {
-    display: inline-block;
-    background: #2271b1;
-    color: #fff;
-    padding: 3px 8px;
-    border-radius: 3px;
-    font-size: 12px;
-    font-weight: 500;
-}
-
-.machine-count-badge.zero {
-    background: #dcdcde;
-    color: #646970;
-}
-
-/* Status Badge */
-.status-badge {
-    display: inline-block;
-    padding: 3px 8px;
-    border-radius: 3px;
-    font-size: 12px;
-    font-weight: 500;
-}
-
-.status-badge.active {
-    background: #00a32a;
-    color: #fff;
-}
-
-.status-badge.inactive {
-    background: #646970;
-    color: #fff;
 }

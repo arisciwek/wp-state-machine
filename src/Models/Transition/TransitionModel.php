@@ -441,6 +441,28 @@ class TransitionModel extends AbstractStateMachineModel {
     }
 
     /**
+     * Get total count of all transitions
+     *
+     * @return int Total number of transitions
+     */
+    public function getTotalCount(): int {
+        global $wpdb;
+
+        // Try to get from cache
+        $cached_count = $this->cache->get('transitions_count', 'total');
+        if ($cached_count !== null) {
+            return (int) $cached_count;
+        }
+
+        $count = $wpdb->get_var("SELECT COUNT(*) FROM {$this->getTableName()}");
+
+        // Cache the count
+        $this->cache->set('transitions_count', $count, 300, 'total');
+
+        return (int) $count;
+    }
+
+    /**
      * Delete all transitions for a machine
      * Used when deleting a machine
      *

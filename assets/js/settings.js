@@ -30,17 +30,13 @@
 (function($) {
     'use strict';
 
-    // Debug: Check if localized data exists
-    console.log('=== SETTINGS JS LOADED ===');
-    console.log('wpStateMachineSettingsData:', typeof wpStateMachineSettingsData !== 'undefined' ? wpStateMachineSettingsData : 'NOT DEFINED');
-
     const SettingsAdmin = {
         /**
          * Localized data from PHP
          */
-        nonce: typeof wpStateMachineSettingsData !== 'undefined' ? wpStateMachineSettingsData.nonce : '',
-        ajaxUrl: typeof wpStateMachineSettingsData !== 'undefined' ? wpStateMachineSettingsData.ajaxUrl : '',
-        i18n: typeof wpStateMachineSettingsData !== 'undefined' ? wpStateMachineSettingsData.i18n : {},
+        nonce: wpStateMachineSettingsData.nonce,
+        ajaxUrl: wpStateMachineSettingsData.ajaxUrl,
+        i18n: wpStateMachineSettingsData.i18n,
 
         /**
          * Initialize settings page
@@ -118,13 +114,6 @@
             formData.append('action', 'save_state_machine_settings');
             formData.append('tab', activeTab);
 
-            // Debug: log form data
-            console.log('=== SETTINGS FORM SUBMISSION ===');
-            console.log('Active Tab:', activeTab);
-            for (let pair of formData.entries()) {
-                console.log(pair[0] + ': ' + pair[1]);
-            }
-
             // Show loading
             $submitBtn.addClass('loading').prop('disabled', true);
 
@@ -135,22 +124,13 @@
                 processData: false,
                 contentType: false,
                 success: function(response) {
-                    console.log('=== AJAX SUCCESS RESPONSE ===');
-                    console.log('Response:', response);
-
                     if (response.success) {
                         self.showToast(response.data.message, 'success');
-                        console.log('Saved settings:', response.data.settings);
                     } else {
                         self.showToast(response.data.message || self.i18n.error, 'error');
-                        console.error('Error message:', response.data.message);
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('=== AJAX ERROR ===');
-                    console.error('Status:', status);
-                    console.error('Error:', error);
-                    console.error('Response:', xhr.responseText);
                     self.showToast(self.i18n.error, 'error');
                 },
                 complete: function() {

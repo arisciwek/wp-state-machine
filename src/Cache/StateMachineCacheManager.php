@@ -4,7 +4,7 @@
  *
  * @package     WP_State_Machine
  * @subpackage  Cache
- * @version     1.0.0
+ * @version     1.0.1
  * @author      arisciwek
  *
  * Path: /wp-state-machine/src/Cache/StateMachineCacheManager.php
@@ -31,6 +31,12 @@
  * - WordPress Object Cache API
  *
  * Changelog:
+ * 1.0.1 - 2025-11-08
+ * - Fixed DataTable cache invalidation using index tracking
+ * - Added DataTable cache key index for reliable deletion
+ * - Fixed prefix pattern for DataTable cache (type_datatable instead of datatable_type)
+ * - Improved deleteByPrefix to use index instead of iterating cache group
+ *
  * 1.0.0 - 2025-11-07
  * - Initial creation
  * - State machine caching support
@@ -212,13 +218,44 @@ class StateMachineCacheManager {
                 error_log("Setting cache - Key: {$key}, Type: {$type}, Expiry: {$expiry}s");
             }
 
-            return wp_cache_set($key, $value, self::CACHE_GROUP, $expiry);
+            $result = wp_cache_set($key, $value, self::CACHE_GROUP, $expiry);
+
+            // Track DataTable cache keys for easier invalidation
+            if ($result && strpos($key, '_datatable_') !== false) {
+                $this->addToDataTableIndex($type, $key, $expiry);
+            }
+
+            return $result;
         } catch (\Exception $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log("Cache set failed: " . $e->getMessage());
             }
             return false;
         }
+    }
+
+    /**
+     * Add DataTable cache key to index for tracking
+     *
+     * @param string $type Cache type
+     * @param string $key Cache key
+     * @param int $expiry Expiry time
+     * @return void
+     */
+    private function addToDataTableIndex(string $type, string $key, int $expiry): void {
+        $index_key = $type . '_datatable_index';
+        $index = wp_cache_get($index_key, self::CACHE_GROUP);
+
+        if (!is_array($index)) {
+            $index = [];
+        }
+
+        $index[$key] = time() + $expiry;
+
+        // Set index with same expiry as the longest cached item
+        wp_cache_set($index_key, $index, self::CACHE_GROUP, $expiry);
+
+        $this->debugLog(sprintf('Added key %s to DataTable index %s', $key, $index_key));
     }
 
     /**
@@ -305,7 +342,8 @@ class StateMachineCacheManager {
             ));
 
             // Use prefix-based deletion to clear all related DataTable caches
-            $prefix = 'datatable_' . $context;
+            // Cache keys are built as: {context}_datatable_{params}
+            $prefix = $context . '_datatable';
             $result = $this->deleteByPrefix($prefix);
 
             $this->debugLog(sprintf(
@@ -323,37 +361,42 @@ class StateMachineCacheManager {
     }
 
     /**
-     * Delete all cache keys with a specific prefix
+     * Delete all cache keys with a specific prefix using index tracking
      *
-     * @param string $prefix Key prefix
+     * @param string $prefix Key prefix (format: {type}_datatable)
      * @return bool True on success, false on failure
      */
     private function deleteByPrefix(string $prefix): bool {
-        global $wp_object_cache;
-
-        // Check if group exists
-        if (!isset($wp_object_cache->cache[self::CACHE_GROUP])) {
-            $this->debugLog('Cache group not found - nothing to delete');
-            return true;
-        }
-
-        // Check if group is empty
-        if (empty($wp_object_cache->cache[self::CACHE_GROUP])) {
-            $this->debugLog('Cache group empty - nothing to delete');
-            return true;
-        }
-
         $deleted = 0;
-        $keys = array_keys($wp_object_cache->cache[self::CACHE_GROUP]);
 
-        foreach ($keys as $key) {
-            if (strpos($key, $prefix) === 0) {
-                $result = wp_cache_delete($key, self::CACHE_GROUP);
-                if ($result) $deleted++;
+        // Extract type from prefix (remove '_datatable' suffix)
+        $type = str_replace('_datatable', '', $prefix);
+        $index_key = $type . '_datatable_index';
+
+        // Get index of all DataTable cache keys
+        $index = wp_cache_get($index_key, self::CACHE_GROUP);
+
+        if (!is_array($index) || empty($index)) {
+            $this->debugLog(sprintf('No DataTable cache index found for type: %s', $type));
+            return true;
+        }
+
+        $this->debugLog(sprintf('Found %d keys in DataTable index for type: %s', count($index), $type));
+
+        // Delete all tracked keys
+        foreach (array_keys($index) as $key) {
+            $result = wp_cache_delete($key, self::CACHE_GROUP);
+            if ($result) {
+                $deleted++;
+                $this->debugLog(sprintf('Deleted DataTable cache key: %s', $key));
             }
         }
 
-        $this->debugLog(sprintf('Deleted %d keys with prefix %s', $deleted, $prefix));
+        // Delete the index itself
+        wp_cache_delete($index_key, self::CACHE_GROUP);
+        $this->debugLog(sprintf('Deleted DataTable index: %s', $index_key));
+
+        $this->debugLog(sprintf('Total deleted: %d DataTable cache keys for prefix: %s', $deleted, $prefix));
         return true;
     }
 

@@ -17,6 +17,7 @@
  * Fields:
  * - id             : Primary key
  * - name           : Group name (e.g., "B2B Transaction Flow")
+ * - label          : Display label (nullable, friendly name for UI)
  * - slug           : Unique slug
  * - description    : Group description (nullable)
  * - icon           : Dashicon class (nullable)
@@ -59,6 +60,7 @@ class WorkflowGroupsDB {
         return "CREATE TABLE {$table_name} (
             id bigint(20) UNSIGNED NOT NULL auto_increment,
             name varchar(100) NOT NULL,
+            label varchar(150) NULL,
             slug varchar(100) NOT NULL,
             description text NULL,
             icon varchar(50) NULL,

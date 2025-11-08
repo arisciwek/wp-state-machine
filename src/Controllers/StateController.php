@@ -88,7 +88,7 @@ class StateController {
         }
 
         // Load view
-        $view_path = WP_STATE_MACHINE_PATH . 'src/Views/admin/states/index.php';
+        $view_path = WP_STATE_MACHINE_PATH . 'src/Views/admin/states/states-view.php';
         if (file_exists($view_path)) {
             include $view_path;
         } else {
@@ -336,8 +336,10 @@ class StateController {
             $state_id = $this->model->create($data);
 
             if ($state_id) {
-                // Clear cache
+                // Clear ALL cache variations
+                $this->cache->invalidateDataTableCache('states_list');
                 $this->cache->delete('states_list');
+                $this->cache->delete('states_count', 'total');
                 $this->cache->delete('state', $state_id);
                 $this->cache->delete('states_by_machine', $data['machine_id']);
 
@@ -345,7 +347,7 @@ class StateController {
                     'message' => __('State created successfully', 'wp-state-machine'),
                     'id' => $state_id
                 ]);
-            } else {
+            } else{
                 wp_send_json_error([
                     'message' => __('Failed to create state', 'wp-state-machine')
                 ]);
@@ -409,8 +411,10 @@ class StateController {
             $result = $this->model->update($id, $data);
 
             if ($result) {
-                // Clear cache
+                // Clear ALL cache variations
+                $this->cache->invalidateDataTableCache('states_list');
                 $this->cache->delete('states_list');
+                $this->cache->delete('states_count', 'total');
                 $this->cache->delete('state', $id);
                 $this->cache->delete('states_by_machine', $data['machine_id']);
 
@@ -469,8 +473,10 @@ class StateController {
             $result = $this->model->delete($id);
 
             if ($result) {
-                // Clear cache
+                // Clear ALL cache variations
+                $this->cache->invalidateDataTableCache('states_list');
                 $this->cache->delete('states_list');
+                $this->cache->delete('states_count', 'total');
                 $this->cache->delete('state', $id);
                 $this->cache->delete('states_by_machine', $state->machine_id);
 

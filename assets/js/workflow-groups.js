@@ -2,404 +2,374 @@
  * Workflow Groups Admin JavaScript
  *
  * @package     WP_State_Machine
- * @version     1.0.0
+ * @subpackage  Assets/JS
+ * @version     1.0.1
  * @author      arisciwek
  *
- * Path: /assets/js/workflow-groups.js
+ * Path: /wp-state-machine/assets/js/workflow-groups.js
  *
- * Description: JavaScript for workflow groups admin interface.
- *              Handles DataTable, CRUD operations, and modals.
+ * Description: Handles DataTable initialization, CRUD operations,
+ *              modal interactions, and AJAX requests for workflow groups.
+ *              Follows machines/states/transitions pattern.
  *
  * Dependencies:
  * - jQuery
  * - DataTables
+ * - wpStateMachineWorkflowGroupsData (localized script)
  *
  * Changelog:
- * 1.0.0 - 2025-11-07 (TODO-6102 PRIORITAS #7)
+ * 1.0.1 - 2025-11-08
+ * - Updated to follow machines/states/transitions pattern
+ * - Fixed initDataTable method
+ * - Added auto-slug generation with input blur
+ * - Added has-value class for readonly slug
+ * - Added icon preview real-time update
+ * - Silent delete success
+ *
+ * 1.0.0 - 2025-11-07
  * - Initial creation
- * - DataTable initialization
- * - CRUD handlers
- * - Modal management
  */
 
 (function($) {
     'use strict';
 
-    // Wait for DOM ready
-    $(document).ready(function() {
-        const GroupsAdmin = {
-            nonce: wpStateMachineGroupsData.nonce,
-            ajaxUrl: wpStateMachineGroupsData.ajaxUrl,
-            groupsTable: null,
+    const WorkflowGroupsAdmin = {
+        /**
+         * DataTable instance
+         */
+        table: null,
 
-            /**
-             * Initialize the groups admin interface
-             */
-            init: function() {
-                this.initDataTable();
-                this.bindEvents();
-            },
+        /**
+         * Localized data from PHP
+         */
+        data: wpStateMachineWorkflowGroupsData,
 
-            /**
-             * Initialize DataTable
-             */
-            initDataTable: function() {
-                const self = this;
+        /**
+         * Initialize admin functionality
+         */
+        init: function() {
+            this.initDataTable();
+            this.bindEvents();
+        },
 
-                if ($.fn.DataTable.isDataTable('#workflow-groups-table')) {
-                    $('#workflow-groups-table').DataTable().destroy();
-                }
+        /**
+         * Initialize DataTable
+         */
+        initDataTable: function() {
+            const self = this;
 
-                this.groupsTable = $('#workflow-groups-table').DataTable({
-                    processing: true,
-                    serverSide: true,
-                    ajax: {
-                        url: this.ajaxUrl,
-                        type: 'POST',
-                        data: function(d) {
-                            d.action = 'handle_workflow_group_datatable';
-                            d.nonce = self.nonce;
-                        },
-                        error: function(xhr, error, thrown) {
-                            console.error('DataTable error:', error, thrown);
-                            alert('Failed to load workflow groups.');
-                        }
-                    },
-                    columns: [
-                        { data: 'id', width: '60px' },
-                        {
-                            data: 'icon',
-                            width: '50px',
-                            orderable: false,
-                            render: function(data) {
-                                return '<span class="dashicons ' + self.escapeHtml(data) + '" style="font-size: 20px;"></span>';
-                            }
-                        },
-                        { data: 'name' },
-                        { data: 'slug', render: function(data) {
-                            return '<code>' + self.escapeHtml(data) + '</code>';
-                        }},
-                        {
-                            data: 'machine_count',
-                            width: '120px',
-                            render: function(data) {
-                                const badgeClass = data > 0 ? 'sm-machine-count' : 'sm-machine-count zero';
-                                return '<span class="' + badgeClass + '">' + data + ' machines</span>';
-                            }
-                        },
-                        { data: 'sort_order', width: '100px' },
-                        {
-                            data: 'is_active',
-                            width: '100px',
-                            render: function(data) {
-                                if (data == 1) {
-                                    return '<span class="sm-status-badge active">' + wpStateMachineGroupsData.i18n.active + '</span>';
-                                } else {
-                                    return '<span class="sm-status-badge inactive">' + wpStateMachineGroupsData.i18n.inactive + '</span>';
-                                }
-                            }
-                        },
-                        {
-                            data: null,
-                            width: '150px',
-                            orderable: false,
-                            render: function(data, type, row) {
-                                return '<div class="sm-action-buttons">' +
-                                    '<button class="button button-small btn-view" data-id="' + row.id + '" title="View Details">' +
-                                    '<span class="dashicons dashicons-visibility"></span></button>' +
-                                    '<button class="button button-small btn-edit" data-id="' + row.id + '" title="Edit">' +
-                                    '<span class="dashicons dashicons-edit"></span></button>' +
-                                    '<button class="button button-small btn-delete" data-id="' + row.id + '" title="Delete">' +
-                                    '<span class="dashicons dashicons-trash"></span></button>' +
-                                    '</div>';
-                            }
-                        }
-                    ],
-                    order: [[5, 'asc'], [2, 'asc']], // Sort by sort_order, then name
-                    pageLength: 25,
-                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-                    language: wpStateMachineGroupsData.i18n.dataTable
-                });
-            },
-
-            /**
-             * Bind event handlers
-             */
-            bindEvents: function() {
-                const self = this;
-
-                // Add new group
-                $('#btn-add-group').on('click', function() {
-                    self.showAddModal();
-                });
-
-                // Edit group (delegated)
-                $('#workflow-groups-table').on('click', '.btn-edit', function() {
-                    const id = $(this).data('id');
-                    self.showEditModal(id);
-                });
-
-                // View group (delegated)
-                $('#workflow-groups-table').on('click', '.btn-view', function() {
-                    const id = $(this).data('id');
-                    self.showViewModal(id);
-                });
-
-                // Delete group (delegated)
-                $('#workflow-groups-table').on('click', '.btn-delete', function() {
-                    const id = $(this).data('id');
-                    self.deleteGroup(id);
-                });
-
-                // Form submit
-                $('#group-form').on('submit', function(e) {
-                    e.preventDefault();
-                    self.saveGroup();
-                });
-
-                // Cancel buttons
-                $('#btn-cancel, .sm-modal-close').on('click', function() {
-                    self.closeModals();
-                });
-
-                // Close view modal
-                $('#btn-close-view').on('click', function() {
-                    $('#view-group-modal').hide();
-                });
-
-                // Auto-generate slug from name
-                $('#group-name').on('input', function() {
-                    if (!$('#group-id').val()) { // Only for new groups
-                        const slug = self.generateSlug($(this).val());
-                        $('#group-slug').val(slug);
-                    }
-                });
-            },
-
-            /**
-             * Show add modal
-             */
-            showAddModal: function() {
-                $('#modal-title').text('Add Workflow Group');
-                $('#group-form')[0].reset();
-                $('#group-id').val('');
-                $('#group-icon').val('dashicons-networking');
-                $('#group-is-active').prop('checked', true);
-                $('.error-message').hide();
-                $('#group-modal').show();
-            },
-
-            /**
-             * Show edit modal
-             */
-            showEditModal: function(id) {
-                const self = this;
-
-                $.ajax({
-                    url: this.ajaxUrl,
-                    type: 'POST',
-                    data: {
-                        action: 'show_workflow_group',
-                        nonce: this.nonce,
-                        id: id
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            const group = response.data.group;
-                            $('#modal-title').text('Edit Workflow Group');
-                            $('#group-id').val(group.id);
-                            $('#group-name').val(group.name);
-                            $('#group-slug').val(group.slug);
-                            $('#group-description').val(group.description);
-                            $('#group-icon').val(group.icon);
-                            $('#group-sort-order').val(group.sort_order);
-                            $('#group-is-active').prop('checked', group.is_active == 1);
-                            $('.error-message').hide();
-                            $('#group-modal').show();
-                        } else {
-                            alert(response.data.message);
-                        }
-                    },
-                    error: function() {
-                        alert('Failed to load group data.');
-                    }
-                });
-            },
-
-            /**
-             * Show view modal
-             */
-            showViewModal: function(id) {
-                const self = this;
-
-                $.ajax({
-                    url: this.ajaxUrl,
-                    type: 'POST',
-                    data: {
-                        action: 'show_workflow_group',
-                        nonce: this.nonce,
-                        id: id
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            const group = response.data.group;
-                            const machines = response.data.machines;
-
-                            $('#view-id').text(group.id);
-                            $('#view-icon-preview').attr('class', 'dashicons ' + group.icon);
-                            $('#view-icon').text(group.icon);
-                            $('#view-name').text(group.name);
-                            $('#view-slug').text(group.slug);
-                            $('#view-description').text(group.description || '-');
-                            $('#view-sort-order').text(group.sort_order);
-                            $('#view-status').html(group.is_active == 1 ?
-                                '<span class="sm-status-badge active">' + wpStateMachineGroupsData.i18n.active + '</span>' :
-                                '<span class="sm-status-badge inactive">' + wpStateMachineGroupsData.i18n.inactive + '</span>'
-                            );
-                            $('#view-created').text(group.created_at);
-                            $('#view-updated').text(group.updated_at);
-
-                            // Machines list
-                            let machinesHtml = '';
-                            if (machines && machines.length > 0) {
-                                machinesHtml = '<ul>';
-                                machines.forEach(function(machine) {
-                                    machinesHtml += '<li><strong>' + self.escapeHtml(machine.name) + '</strong> (' + self.escapeHtml(machine.slug) + ')</li>';
-                                });
-                                machinesHtml += '</ul>';
-                            } else {
-                                machinesHtml = '<em>' + wpStateMachineGroupsData.i18n.noMachines + '</em>';
-                            }
-                            $('#view-machines').html(machinesHtml);
-
-                            $('#view-group-modal').show();
-                        } else {
-                            alert(response.data.message);
-                        }
-                    },
-                    error: function() {
-                        alert('Failed to load group data.');
-                    }
-                });
-            },
-
-            /**
-             * Save group (create or update)
-             */
-            saveGroup: function() {
-                const self = this;
-                const id = $('#group-id').val();
-                const action = id ? 'update_workflow_group' : 'create_workflow_group';
-
-                // Clear previous errors
-                $('.error-message').hide();
-
-                $.ajax({
-                    url: this.ajaxUrl,
-                    type: 'POST',
-                    data: {
-                        action: action,
-                        nonce: this.nonce,
-                        id: id,
-                        name: $('#group-name').val(),
-                        slug: $('#group-slug').val(),
-                        description: $('#group-description').val(),
-                        icon: $('#group-icon').val(),
-                        sort_order: $('#group-sort-order').val(),
-                        is_active: $('#group-is-active').is(':checked') ? 1 : 0
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            self.closeModals();
-                            self.groupsTable.ajax.reload();
-                            alert(response.data.message);
-                        } else {
-                            // Show validation errors
-                            if (response.data.errors) {
-                                $.each(response.data.errors, function(field, message) {
-                                    $('#error-' + field).text(message).show();
-                                });
-                            } else {
-                                alert(response.data.message);
-                            }
-                        }
-                    },
-                    error: function() {
-                        alert('An error occurred while saving the group.');
-                    }
-                });
-            },
-
-            /**
-             * Delete group
-             */
-            deleteGroup: function(id) {
-                const self = this;
-
-                if (!confirm(wpStateMachineGroupsData.i18n.confirmDelete)) {
-                    return;
-                }
-
-                $.ajax({
-                    url: this.ajaxUrl,
-                    type: 'POST',
-                    data: {
-                        action: 'delete_workflow_group',
-                        nonce: this.nonce,
-                        id: id
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            self.groupsTable.ajax.reload();
-                            alert(response.data.message);
-                        } else {
-                            alert(response.data.message || wpStateMachineGroupsData.i18n.deleteError);
-                        }
-                    },
-                    error: function() {
-                        alert('An error occurred while deleting the group.');
-                    }
-                });
-            },
-
-            /**
-             * Close all modals
-             */
-            closeModals: function() {
-                $('#group-modal').hide();
-                $('#view-group-modal').hide();
-                $('#group-form')[0].reset();
-                $('.error-message').hide();
-            },
-
-            /**
-             * Generate slug from text
-             */
-            generateSlug: function(text) {
-                return text
-                    .toLowerCase()
-                    .replace(/[^a-z0-9]+/g, '-')
-                    .replace(/(^-|-$)/g, '');
-            },
-
-            /**
-             * Escape HTML to prevent XSS
-             */
-            escapeHtml: function(text) {
-                if (!text) return '';
-                const map = {
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '"': '&quot;',
-                    "'": '&#039;'
-                };
-                return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
+            // Check if DataTables is loaded and table exists
+            if ($.fn.DataTable && $.fn.DataTable.isDataTable('#workflow-groups-table')) {
+                $('#workflow-groups-table').DataTable().destroy();
             }
-        };
 
-        // Initialize
-        GroupsAdmin.init();
+            this.table = $('#workflow-groups-table').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: self.data.ajaxUrl,
+                    type: 'POST',
+                    data: function(d) {
+                        d.action = 'handle_workflow_group_datatable';
+                        d.nonce = self.data.nonce;
+                    }
+                },
+                columns: [
+                    { data: 'id' },
+                    {
+                        data: 'icon',
+                        orderable: false,
+                        render: function(data, type, row) {
+                            if (data) {
+                                return '<span class="dashicons ' + data + '"></span>';
+                            }
+                            return '<span class="dashicons dashicons-networking"></span>';
+                        }
+                    },
+                    { data: 'name' },
+                    {
+                        data: 'slug',
+                        render: function(data, type, row) {
+                            return '<code>' + data + '</code>';
+                        }
+                    },
+                    {
+                        data: 'machine_count',
+                        render: function(data, type, row) {
+                            const badgeClass = data > 0 ? 'machine-count-badge' : 'machine-count-badge zero';
+                            return '<span class="' + badgeClass + '">' + data + '</span>';
+                        }
+                    },
+                    { data: 'sort_order' },
+                    {
+                        data: 'is_active',
+                        render: function(data, type, row) {
+                            if (data == 1) {
+                                return '<span class="status-badge active">' + self.data.i18n.active + '</span>';
+                            }
+                            return '<span class="status-badge inactive">' + self.data.i18n.inactive + '</span>';
+                        }
+                    },
+                    { data: 'actions', orderable: false, searchable: false }
+                ],
+                order: [[5, 'asc']], // Sort by sort_order
+                pageLength: 25,
+                language: {
+                    emptyTable: self.data.i18n.emptyTable,
+                    processing: self.data.i18n.processing
+                }
+            });
+        },
+
+        /**
+         * Bind event handlers
+         */
+        bindEvents: function() {
+            const self = this;
+
+            // Add new group
+            $('#btn-add-group').on('click', function() {
+                self.openCreateModal();
+            });
+
+            // Close modals
+            $('.modal-close').on('click', function() {
+                $(this).closest('.wp-state-machine-modal').fadeOut();
+            });
+
+            // Close modal on outside click
+            $('.wp-state-machine-modal').on('click', function(e) {
+                if ($(e.target).hasClass('wp-state-machine-modal')) {
+                    $(this).fadeOut();
+                }
+            });
+
+            // Auto-generate slug from name (only in create mode)
+            $('#group-name').on('input blur', function() {
+                // Only auto-generate if in create mode (no ID)
+                if (!$('#group-id').val()) {
+                    const slug = self.generateSlug($(this).val());
+                    $('#group-slug').val(slug);
+                }
+            });
+
+            // Icon preview real-time update
+            $('#group-icon').on('input blur', function() {
+                const iconClass = $(this).val() || 'dashicons-networking';
+                $('#icon-preview-display').attr('class', 'dashicons ' + iconClass);
+            });
+
+            // Save group
+            $('#btn-save-group').on('click', function() {
+                self.saveGroup();
+            });
+
+            // View group
+            $(document).on('click', '.btn-view-group', function() {
+                self.viewGroup($(this).data('id'));
+            });
+
+            // Edit group
+            $(document).on('click', '.btn-edit-group', function() {
+                self.editGroup($(this).data('id'));
+            });
+
+            // Delete group
+            $(document).on('click', '.btn-delete-group', function() {
+                self.deleteGroup($(this).data('id'));
+            });
+        },
+
+        /**
+         * Open create modal
+         */
+        openCreateModal: function() {
+            $('#group-form')[0].reset();
+            $('#group-id').val('');
+            $('#group-slug').removeClass('has-value');
+            $('#icon-preview-display').attr('class', 'dashicons dashicons-networking');
+            $('#modal-title').text(this.data.i18n.addTitle);
+            $('#group-modal').fadeIn();
+        },
+
+        /**
+         * Generate slug from name
+         */
+        generateSlug: function(name) {
+            return name
+                .toLowerCase()
+                .replace(/[^a-z0-9-_]/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+        },
+
+        /**
+         * Save group (create or update)
+         */
+        saveGroup: function() {
+            const self = this;
+            const groupId = $('#group-id').val();
+            const action = groupId ? 'update_workflow_group' : 'create_workflow_group';
+
+            const formData = {
+                action: action,
+                nonce: self.data.nonce,
+                id: groupId,
+                name: $('#group-name').val(),
+                slug: $('#group-slug').val(),
+                description: $('#group-description').val(),
+                icon: $('#group-icon').val(),
+                sort_order: $('#group-sort-order').val(),
+                is_active: $('#group-is-active').prop('checked') ? 1 : 0
+            };
+
+            $.post(self.data.ajaxUrl, formData)
+                .done(function(response) {
+                    if (response.success) {
+                        // Close modal and reload table
+                        $('#group-modal').fadeOut(200);
+                        setTimeout(function() {
+                            if (self.table && self.table.ajax) {
+                                self.table.ajax.reload(null, false);
+                            }
+                        }, 250);
+                    } else {
+                        let errorMsg = response.data.message;
+                        if (response.data.errors) {
+                            errorMsg += '\n\n' + Object.values(response.data.errors).join('\n');
+                        }
+                        alert(errorMsg);
+                    }
+                })
+                .fail(function(xhr, status, error) {
+                    console.error('AJAX Error:', status, error, xhr.responseText);
+                    alert('An error occurred while saving. Please check console for details.');
+                });
+        },
+
+        /**
+         * View group details
+         */
+        viewGroup: function(id) {
+            const self = this;
+
+            console.log('View group clicked, ID:', id);
+
+            $.post(self.data.ajaxUrl, {
+                action: 'show_workflow_group',
+                nonce: self.data.nonce,
+                id: id
+            }, function(response) {
+                console.log('View response:', response);
+
+                if (response.success) {
+                    const group = response.data.data;
+                    console.log('Group data for view:', group);
+
+                    $('#view-group-id').text(group.id);
+                    $('#view-group-name').text(group.name);
+                    $('#view-group-slug').text(group.slug);
+                    $('#view-group-description').text(group.description || '-');
+                    $('#view-group-icon').text(group.icon || 'dashicons-networking');
+                    $('#view-group-icon-preview').attr('class', 'dashicons ' + (group.icon || 'dashicons-networking'));
+                    $('#view-group-sort-order').text(group.sort_order);
+                    $('#view-group-status').html(
+                        group.is_active == 1 ?
+                            '<span class="dashicons dashicons-yes" style="color:green;"></span> ' + self.data.i18n.active :
+                            '<span class="dashicons dashicons-no" style="color:red;"></span> ' + self.data.i18n.inactive
+                    );
+                    $('#view-group-machines').text(group.machine_count || '0');
+                    $('#view-group-created').text(group.created_at);
+                    $('#view-group-updated').text(group.updated_at);
+                    $('#view-group-modal').fadeIn();
+                } else {
+                    console.error('View failed:', response.data);
+                    alert('Error: ' + (response.data.message || 'Failed to load group'));
+                }
+            }).fail(function(xhr, status, error) {
+                console.error('AJAX Error:', status, error, xhr);
+                alert('AJAX error: ' + error);
+            });
+        },
+
+        /**
+         * Edit group
+         */
+        editGroup: function(id) {
+            const self = this;
+
+            console.log('Edit group clicked, ID:', id);
+
+            $.post(self.data.ajaxUrl, {
+                action: 'show_workflow_group',
+                nonce: self.data.nonce,
+                id: id
+            }, function(response) {
+                console.log('Edit response:', response);
+
+                if (response.success) {
+                    const group = response.data.data;
+                    console.log('Group data:', group);
+
+                    $('#group-id').val(group.id);
+                    $('#group-name').val(group.name);
+                    $('#group-slug').val(group.slug).addClass('has-value');
+                    $('#group-description').val(group.description || '');
+                    $('#group-icon').val(group.icon || 'dashicons-networking');
+                    $('#icon-preview-display').attr('class', 'dashicons ' + (group.icon || 'dashicons-networking'));
+                    $('#group-sort-order').val(group.sort_order);
+                    $('#group-is-active').prop('checked', group.is_active == 1);
+                    $('#modal-title').text(self.data.i18n.editTitle);
+                    $('#group-modal').fadeIn();
+                } else {
+                    console.error('Edit failed:', response.data);
+                    alert('Error: ' + (response.data.message || 'Failed to load group'));
+                }
+            }).fail(function(xhr, status, error) {
+                console.error('AJAX Error:', status, error, xhr);
+                alert('AJAX error: ' + error);
+            });
+        },
+
+        /**
+         * Delete group
+         */
+        deleteGroup: function(id) {
+            const self = this;
+
+            if (!confirm(self.data.i18n.confirmDelete)) {
+                return;
+            }
+
+            $.post(self.data.ajaxUrl, {
+                action: 'delete_workflow_group',
+                nonce: self.data.nonce,
+                id: id
+            }, function(response) {
+                if (response.success) {
+                    self.table.ajax.reload();
+                    // Silent success - no alert
+                } else {
+                    alert(response.data.message);
+                }
+            });
+        }
+    };
+
+    // Initialize on document ready
+    $(document).ready(function() {
+        // Ensure DataTables is loaded before initializing
+        if (typeof $.fn.DataTable === 'undefined') {
+            console.error('DataTables library not loaded');
+            return;
+        }
+
+        if (typeof wpStateMachineWorkflowGroupsData === 'undefined') {
+            console.error('Workflow groups data not localized');
+            return;
+        }
+
+        WorkflowGroupsAdmin.init();
     });
 
 })(jQuery);

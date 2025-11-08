@@ -83,7 +83,7 @@ class WorkflowGroupController {
      */
     public function renderMainPage() {
         // Check permission
-        if (!current_user_can('view_workflow_groups')) {
+        if (!current_user_can('view_state_machines')) {
             wp_die(__('You do not have permission to access this page.', 'wp-state-machine'));
         }
 
@@ -112,7 +112,7 @@ class WorkflowGroupController {
         check_ajax_referer('wp_state_machine_nonce', 'nonce');
 
         // Check permission
-        if (!current_user_can('view_workflow_groups')) {
+        if (!current_user_can('view_state_machines')) {
             wp_send_json_error([
                 'message' => __('Permission denied', 'wp-state-machine')
             ]);
@@ -160,8 +160,18 @@ class WorkflowGroupController {
 
             $result = $this->model->getForDataTable($params);
 
+            // Add action buttons to each row
+            if (!empty($result['data'])) {
+                foreach ($result['data'] as $index => $row) {
+                    // Convert object to array if needed
+                    $rowData = is_object($row) ? (array) $row : $row;
+                    $rowData['actions'] = $this->getActionButtons($row);
+                    $result['data'][$index] = $rowData;
+                }
+            }
+
             // Cache result for 5 minutes
-            $this->cache->set('workflow_groups_list', $cache_key, $result, 300);
+            $this->cache->set('workflow_groups_list', $result, 300, $cache_key);
 
             wp_send_json($result);
 
@@ -183,7 +193,7 @@ class WorkflowGroupController {
         check_ajax_referer('wp_state_machine_nonce', 'nonce');
 
         // Check permission
-        if (!current_user_can('create_workflow_groups')) {
+        if (!current_user_can('manage_state_machines')) {
             wp_send_json_error([
                 'message' => __('Permission denied', 'wp-state-machine')
             ]);
@@ -212,7 +222,10 @@ class WorkflowGroupController {
             }
 
             // Clear cache
-            $this->cache->flush();
+            $this->cache->invalidateDataTableCache('workflow_groups_list');
+            $this->cache->delete('workflow_groups_list');
+            $this->cache->delete('workflow_groups_count', 'total');
+            $this->cache->delete('workflow_group', $id);
 
             // Get created group
             $group = $this->model->find($id);
@@ -251,7 +264,7 @@ class WorkflowGroupController {
         }
 
         // Check permission
-        if (!current_user_can('edit_workflow_groups')) {
+        if (!current_user_can('manage_state_machines')) {
             wp_send_json_error([
                 'message' => __('Permission denied', 'wp-state-machine')
             ]);
@@ -283,7 +296,10 @@ class WorkflowGroupController {
             $this->model->markAsCustom($id);
 
             // Clear cache
-            $this->cache->flush();
+            $this->cache->invalidateDataTableCache('workflow_groups_list');
+            $this->cache->delete('workflow_groups_list');
+            $this->cache->delete('workflow_groups_count', 'total');
+            $this->cache->delete('workflow_group', $id);
 
             // Get updated group
             $group = $this->model->find($id);
@@ -322,7 +338,7 @@ class WorkflowGroupController {
         }
 
         // Check permission
-        if (!current_user_can('delete_workflow_groups')) {
+        if (!current_user_can('manage_state_machines')) {
             wp_send_json_error([
                 'message' => __('Permission denied', 'wp-state-machine')
             ]);
@@ -348,7 +364,10 @@ class WorkflowGroupController {
             }
 
             // Clear cache
-            $this->cache->flush();
+            $this->cache->invalidateDataTableCache('workflow_groups_list');
+            $this->cache->delete('workflow_groups_list');
+            $this->cache->delete('workflow_groups_count', 'total');
+            $this->cache->delete('workflow_group', $id);
 
             wp_send_json_success([
                 'message' => __('Workflow group deleted successfully', 'wp-state-machine')
@@ -375,7 +394,7 @@ class WorkflowGroupController {
         $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
 
         // Check permission
-        if (!current_user_can('view_workflow_groups')) {
+        if (!current_user_can('view_state_machines')) {
             wp_send_json_error([
                 'message' => __('Permission denied', 'wp-state-machine')
             ]);
@@ -391,12 +410,16 @@ class WorkflowGroupController {
                 ]);
             }
 
-            // Get assigned machines
+            // Get assigned machines count
             $machines = $this->model->getMachines($id);
+            $machine_count = count($machines);
+
+            // Add machine count to group data
+            $groupData = (array) $group;
+            $groupData['machine_count'] = $machine_count;
 
             wp_send_json_success([
-                'group' => $group,
-                'machines' => $machines
+                'data' => $groupData
             ]);
 
         } catch (\Exception $e) {
@@ -418,7 +441,7 @@ class WorkflowGroupController {
         check_ajax_referer('wp_state_machine_nonce', 'nonce');
 
         // Check permission
-        if (!current_user_can('edit_workflow_groups')) {
+        if (!current_user_can('manage_state_machines')) {
             wp_send_json_error([
                 'message' => __('Permission denied', 'wp-state-machine')
             ]);
@@ -459,6 +482,50 @@ class WorkflowGroupController {
                 'message' => __('An error occurred while updating sort order', 'wp-state-machine')
             ]);
         }
+    }
+
+    /**
+     * Generate action buttons for DataTable row
+     *
+     * @param array|object $group Workflow group data
+     * @return string HTML for action buttons
+     */
+    private function getActionButtons($group) {
+        // Convert to object if array
+        if (is_array($group)) {
+            $group = (object) $group;
+        }
+
+        $buttons = [];
+
+        // View button
+        $buttons[] = sprintf(
+            '<button type="button" class="button button-small btn-view-group" data-id="%d" title="%s">
+                <span class="dashicons dashicons-visibility"></span>
+            </button>',
+            $group->id,
+            esc_attr__('View', 'wp-state-machine')
+        );
+
+        // Edit button
+        $buttons[] = sprintf(
+            '<button type="button" class="button button-small btn-edit-group" data-id="%d" title="%s">
+                <span class="dashicons dashicons-edit"></span>
+            </button>',
+            $group->id,
+            esc_attr__('Edit', 'wp-state-machine')
+        );
+
+        // Delete button
+        $buttons[] = sprintf(
+            '<button type="button" class="button button-small btn-delete-group" data-id="%d" title="%s">
+                <span class="dashicons dashicons-trash"></span>
+            </button>',
+            $group->id,
+            esc_attr__('Delete', 'wp-state-machine')
+        );
+
+        return implode(' ', $buttons);
     }
 
     /**

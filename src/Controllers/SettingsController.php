@@ -188,17 +188,8 @@ class SettingsController {
         }
 
         try {
-            // Debug: log all POST data first
-            error_log('=== SETTINGS SAVE AJAX CALLED ===');
-            error_log('POST data: ' . print_r($_POST, true));
-            error_log('Nonce from POST: ' . (isset($_POST['nonce']) ? $_POST['nonce'] : 'NOT SET'));
-
             // Verify nonce
-            $nonce_check = check_ajax_referer('wp_state_machine_nonce', 'nonce', false);
-            error_log('Nonce check result: ' . ($nonce_check ? 'PASSED' : 'FAILED'));
-
-            if (!$nonce_check) {
-                error_log('Security check failed - nonce invalid');
+            if (!check_ajax_referer('wp_state_machine_nonce', 'nonce', false)) {
                 throw new \Exception(__('Security check failed', 'wp-state-machine'));
             }
 
@@ -211,15 +202,8 @@ class SettingsController {
             $tab = isset($_POST['tab']) ? sanitize_text_field($_POST['tab']) : '';
             $settings_data = isset($_POST['settings']) ? $_POST['settings'] : [];
 
-            // Debug logging
-            error_log('=== SETTINGS SAVE DEBUG ===');
-            error_log('Tab: ' . $tab);
-            error_log('Posted settings data: ' . print_r($settings_data, true));
-            error_log('Raw POST: ' . print_r($_POST, true));
-
             // Get current settings
             $current_settings = $this->getSettings();
-            error_log('Current settings before update: ' . print_r($current_settings, true));
 
             // Update settings based on tab
             switch ($tab) {
@@ -240,16 +224,8 @@ class SettingsController {
             }
 
             // Sanitize and save
-            error_log('Settings after tab update: ' . print_r($current_settings, true));
             $current_settings = $this->sanitizeSettings($current_settings);
-            error_log('Settings after sanitize: ' . print_r($current_settings, true));
-
-            $saved = update_option($this->option_name, $current_settings);
-            error_log('Settings saved to DB: ' . ($saved ? 'YES' : 'NO'));
-
-            // Verify what was actually saved
-            $verified = get_option($this->option_name);
-            error_log('Settings retrieved from DB: ' . print_r($verified, true));
+            update_option($this->option_name, $current_settings);
 
             // Clear cache if cache settings changed
             if ($tab === 'cache') {
