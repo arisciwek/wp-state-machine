@@ -383,6 +383,83 @@ defined('ABSPATH') || exit;
                             </td>
                         </tr>
 
+                        <!-- Development Settings -->
+                        <tr>
+                            <th scope="row" colspan="2" style="background-color: #f0f0f0; padding: 15px;">
+                                <h3 style="margin: 0;">
+                                    <span class="dashicons dashicons-admin-tools" style="color: #d63638;"></span>
+                                    <?php echo esc_html__('Development Settings', 'wp-state-machine'); ?>
+                                </h3>
+                            </th>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
+                                <label for="enable_development">
+                                    <?php echo esc_html__('Development Mode', 'wp-state-machine'); ?>
+                                </label>
+                            </th>
+                            <td>
+                                <label class="sm-switch">
+                                    <input type="checkbox"
+                                           id="enable_development"
+                                           name="settings[enable_development]"
+                                           value="1"
+                                           <?php checked($settings['enable_development'], true); ?>>
+                                    <span class="sm-slider"></span>
+                                </label>
+                                <p class="description">
+                                    <?php echo esc_html__('Enable development features and debugging', 'wp-state-machine'); ?>
+                                </p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
+                                <label for="clear_data_on_deactivate">
+                                    <?php echo esc_html__('Clear Data on Deactivate', 'wp-state-machine'); ?>
+                                </label>
+                            </th>
+                            <td>
+                                <label class="sm-switch">
+                                    <input type="checkbox"
+                                           id="clear_data_on_deactivate"
+                                           name="settings[clear_data_on_deactivate]"
+                                           value="1"
+                                           <?php checked($settings['clear_data_on_deactivate'], true); ?>>
+                                    <span class="sm-slider"></span>
+                                </label>
+                                <p class="description">
+                                    <?php echo esc_html__('Clear all data when plugin is deactivated (requires Development Mode)', 'wp-state-machine'); ?>
+                                </p>
+                                <div id="dev-mode-warning" style="display: <?php echo ($settings['enable_development'] && $settings['clear_data_on_deactivate']) ? 'block' : 'none'; ?>; margin-top: 10px; padding: 10px; background: #fcf3e6; border-left: 4px solid #d63638;">
+                                    <p style="margin: 0; color: #d63638;">
+                                        <strong><?php echo esc_html__('⚠️ WARNING: Development Mode Active!', 'wp-state-machine'); ?></strong>
+                                    </p>
+                                    <p style="margin: 5px 0 0 0;">
+                                        <?php echo esc_html__('Deactivating this plugin will permanently delete:', 'wp-state-machine'); ?>
+                                    </p>
+                                    <ul style="margin: 5px 0 0 20px;">
+                                        <li><?php echo esc_html__('All state machines', 'wp-state-machine'); ?></li>
+                                        <li><?php echo esc_html__('All states and transitions', 'wp-state-machine'); ?></li>
+                                        <li><?php echo esc_html__('All workflow groups', 'wp-state-machine'); ?></li>
+                                        <li><?php echo esc_html__('All transition logs', 'wp-state-machine'); ?></li>
+                                        <li><?php echo esc_html__('All plugin settings', 'wp-state-machine'); ?></li>
+                                        <li><?php echo esc_html__('All custom capabilities', 'wp-state-machine'); ?></li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row" colspan="2" style="background-color: #f0f0f0; padding: 15px;">
+                                <h3 style="margin: 0;">
+                                    <span class="dashicons dashicons-database"></span>
+                                    <?php echo esc_html__('Maintenance', 'wp-state-machine'); ?>
+                                </h3>
+                            </th>
+                        </tr>
+
                         <tr>
                             <th scope="row">
                                 <?php echo esc_html__('Manual Cleanup', 'wp-state-machine'); ?>
@@ -409,6 +486,54 @@ defined('ABSPATH') || exit;
                                 </button>
                                 <div id="database-stats" class="sm-stats-container" style="display:none; margin-top:15px;">
                                     <!-- Stats will be loaded here via AJAX -->
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Workflow Seeder Section -->
+                        <tr>
+                            <th scope="row" colspan="2" style="background-color: #f0f0f0; padding: 15px;">
+                                <h3 style="margin: 0;">
+                                    <span class="dashicons dashicons-download"></span>
+                                    <?php echo esc_html__('Default Workflows', 'wp-state-machine'); ?>
+                                </h3>
+                            </th>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2">
+                                <p class="description" style="margin-bottom: 15px;">
+                                    <?php echo esc_html__('Manage individual workflow templates. Each workflow can be seeded or reset independently.', 'wp-state-machine'); ?>
+                                </p>
+
+                                <!-- Workflow Grid Container -->
+                                <div id="workflows-grid" class="workflows-grid">
+                                    <div style="text-align: center; padding: 40px;">
+                                        <span class="spinner is-active" style="float: none;"></span>
+                                        <p><?php echo esc_html__('Loading workflows...', 'wp-state-machine'); ?></p>
+                                    </div>
+                                </div>
+
+                                <!-- Bulk Actions -->
+                                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
+                                    <h4><?php echo esc_html__('Bulk Actions', 'wp-state-machine'); ?></h4>
+                                    <button type="button" class="button button-secondary" id="btn-seed-all-workflows">
+                                        <span class="dashicons dashicons-download"></span>
+                                        <?php echo esc_html__('Seed All Workflows', 'wp-state-machine'); ?>
+                                    </button>
+
+                                    <button type="button" class="button button-secondary" id="btn-reset-all-workflows" style="color: #d63638; margin-left: 10px;">
+                                        <span class="dashicons dashicons-update"></span>
+                                        <?php echo esc_html__('Reset All to Defaults', 'wp-state-machine'); ?>
+                                    </button>
+
+                                    <!-- Dev Mode Required Notice -->
+                                    <div id="reset-dev-mode-notice" style="display: <?php echo $settings['enable_development'] ? 'none' : 'block'; ?>; margin-top: 10px; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107;">
+                                        <p style="margin: 0; color: #856404;">
+                                            <strong><?php echo esc_html__('ℹ️ Development Mode Required', 'wp-state-machine'); ?></strong><br>
+                                            <?php echo esc_html__('To reset workflows, you must enable Development Mode above. This is a safety feature to prevent accidental data loss.', 'wp-state-machine'); ?>
+                                        </p>
+                                    </div>
                                 </div>
                             </td>
                         </tr>

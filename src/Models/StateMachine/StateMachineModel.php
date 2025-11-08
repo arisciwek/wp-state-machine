@@ -98,7 +98,9 @@ class StateMachineModel extends AbstractStateMachineModel {
             'entity_type',
             'workflow_group_id',
             'description',
-            'is_active'
+            'is_active',
+            'is_default',
+            'is_custom'
         ];
     }
 
@@ -117,6 +119,9 @@ class StateMachineModel extends AbstractStateMachineModel {
             'workflow_group_id' => $data['workflow_group_id'] ?? null,
             'description' => $data['description'] ?? '',
             'is_active' => isset($data['is_active']) ? (int) $data['is_active'] : 1,
+            'is_default' => isset($data['is_default']) ? (int) $data['is_default'] : 0,
+            'is_custom' => isset($data['is_custom']) ? (int) $data['is_custom'] : 0,
+            'created_by' => $data['created_by'] ?? get_current_user_id(),
             'created_at' => current_time('mysql'),
             'updated_at' => current_time('mysql')
         ];
@@ -137,6 +142,9 @@ class StateMachineModel extends AbstractStateMachineModel {
             'workflow_group_id' => '%d',
             'description' => '%s',
             'is_active' => '%d',
+            'is_default' => '%d',
+            'is_custom' => '%d',
+            'created_by' => '%d',
             'created_at' => '%s',
             'updated_at' => '%s'
         ];

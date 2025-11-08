@@ -1,0 +1,159 @@
+# Order Workflow
+# E-commerce order lifecycle management
+
+workflow_group:
+  name: "E-Commerce"
+  slug: "e-commerce"
+  description: "Workflows for managing e-commerce orders, payments, and fulfillment"
+
+state_machine:
+  name: "Order Workflow"
+  slug: "order-workflow"
+  entity_type: "order"
+  description: "Manages e-commerce order lifecycle from cart to delivery"
+  plugin_slug: "wp-state-machine"
+
+states:
+  - name: "Pending Payment"
+    slug: "pending"
+    type: "initial"
+    description: "Order created, awaiting payment confirmation"
+    color: "#ffc107"
+
+  - name: "Processing"
+    slug: "processing"
+    type: "intermediate"
+    description: "Payment confirmed, preparing order for shipment"
+    color: "#17a2b8"
+
+  - name: "Ready to Ship"
+    slug: "ready-to-ship"
+    type: "intermediate"
+    description: "Order is packed and ready for pickup/delivery"
+    color: "#20c997"
+
+  - name: "Shipped"
+    slug: "shipped"
+    type: "intermediate"
+    description: "Order has been shipped to customer"
+    color: "#28a745"
+
+  - name: "Completed"
+    slug: "completed"
+    type: "final"
+    description: "Order delivered and transaction complete"
+    color: "#007bff"
+
+  - name: "Cancelled"
+    slug: "cancelled"
+    type: "final"
+    description: "Order cancelled by customer or admin"
+    color: "#6c757d"
+
+  - name: "Failed"
+    slug: "failed"
+    type: "final"
+    description: "Payment failed or order could not be processed"
+    color: "#dc3545"
+
+  - name: "Refunded"
+    slug: "refunded"
+    type: "final"
+    description: "Order refunded to customer"
+    color: "#fd7e14"
+
+transitions:
+  - name: "Confirm Payment"
+    slug: "confirm-payment"
+    from_state: "pending"
+    to_state: "processing"
+    description: "Payment received, begin order processing"
+    conditions: []
+    actions:
+      - validate_payment
+      - send_confirmation_email
+      - update_inventory
+
+  - name: "Mark Ready to Ship"
+    slug: "mark-ready"
+    from_state: "processing"
+    to_state: "ready-to-ship"
+    description: "Order is packed and ready for pickup"
+    conditions: []
+    actions:
+      - validate_packaging
+      - notify_shipping_team
+
+  - name: "Ship Order"
+    slug: "ship-order"
+    from_state: "ready-to-ship"
+    to_state: "shipped"
+    description: "Order has been dispatched"
+    conditions: []
+    actions:
+      - generate_tracking_number
+      - send_shipping_notification
+      - update_shipping_status
+
+  - name: "Complete Order"
+    slug: "complete-order"
+    from_state: "shipped"
+    to_state: "completed"
+    description: "Order delivered successfully"
+    conditions: []
+    actions:
+      - confirm_delivery
+      - request_review
+      - release_payment_to_vendor
+
+  - name: "Cancel from Pending"
+    slug: "cancel-pending"
+    from_state: "pending"
+    to_state: "cancelled"
+    description: "Cancel order before payment"
+    conditions: []
+    actions:
+      - notify_customer_cancellation
+      - restore_inventory
+
+  - name: "Cancel from Processing"
+    slug: "cancel-processing"
+    from_state: "processing"
+    to_state: "cancelled"
+    description: "Cancel order after payment (refund required)"
+    conditions: []
+    actions:
+      - initiate_refund
+      - notify_customer_cancellation
+      - restore_inventory
+
+  - name: "Payment Failed"
+    slug: "payment-failed"
+    from_state: "pending"
+    to_state: "failed"
+    description: "Payment attempt failed"
+    conditions: []
+    actions:
+      - notify_payment_failure
+      - restore_inventory
+
+  - name: "Process Refund"
+    slug: "process-refund"
+    from_state: "cancelled"
+    to_state: "refunded"
+    description: "Issue refund to customer"
+    conditions: []
+    actions:
+      - process_payment_refund
+      - send_refund_confirmation
+
+  - name: "Refund Completed"
+    slug: "refund-completed"
+    from_state: "completed"
+    to_state: "refunded"
+    description: "Refund completed order"
+    conditions: []
+    actions:
+      - process_payment_refund
+      - send_refund_confirmation
+      - update_sales_report

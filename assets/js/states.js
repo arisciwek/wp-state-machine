@@ -40,6 +40,11 @@
         currentMachineId: '',
 
         /**
+         * Prevent double-click on filter
+         */
+        isFiltering: false,
+
+        /**
          * Localized data from PHP
          */
         data: wpStateMachineStatesData,
@@ -73,6 +78,21 @@
                         d.action = 'handle_state_datatable';
                         d.nonce = self.data.nonce;
                         d.machine_id = self.currentMachineId;
+                        d._cache_bust = Date.now(); // Prevent caching issues
+                    },
+                    error: function(xhr, error, code) {
+                        // Force hide processing indicator
+                        $('.dataTables_processing').hide();
+                        // Reset filtering state
+                        self.isFiltering = false;
+                        $('#btn-filter').prop('disabled', false).removeClass('loading');
+                    },
+                    dataSrc: function(json) {
+                        // Ensure data is valid
+                        if (!json || !json.data) {
+                            return [];
+                        }
+                        return json.data;
                     }
                 },
                 columns: [
@@ -111,9 +131,43 @@
             const self = this;
 
             // Filter button
-            $('#btn-filter').on('click', function() {
-                self.currentMachineId = $('#filter-machine').val();
-                self.table.ajax.reload();
+            $('#btn-filter').on('click', function(e) {
+                e.preventDefault();
+
+                // Prevent double-click
+                if (self.isFiltering) {
+                    return;
+                }
+
+                const selectedMachine = $('#filter-machine').val();
+
+                // Update current machine ID (empty string for "Show All")
+                self.currentMachineId = selectedMachine || '';
+                self.isFiltering = true;
+
+                // Disable button during filtering
+                $(this).prop('disabled', true).addClass('loading');
+
+                // Timeout fallback (in case request hangs)
+                const timeoutId = setTimeout(function() {
+                    self.isFiltering = false;
+                    $('#btn-filter').prop('disabled', false).removeClass('loading');
+                    $('.dataTables_processing').hide();
+                }, 10000); // 10 second timeout
+
+                // Force reload with callbacks to ensure spinner stops
+                if (self.table && self.table.ajax) {
+                    self.table.ajax.reload(function(json) {
+                        // Success callback
+                        clearTimeout(timeoutId);
+                        self.isFiltering = false;
+                        $('#btn-filter').prop('disabled', false).removeClass('loading');
+                    }, false); // false = don't reset paging
+                } else {
+                    clearTimeout(timeoutId);
+                    self.isFiltering = false;
+                    $('#btn-filter').prop('disabled', false).removeClass('loading');
+                }
             });
 
             // Add new state
@@ -231,8 +285,7 @@
                     }
                 })
                 .fail(function(xhr, status, error) {
-                    console.error('AJAX Error:', status, error, xhr.responseText);
-                    alert('An error occurred while saving. Please check console for details.');
+                    alert('An error occurred while saving. Please try again.');
                 });
         },
 
@@ -324,7 +377,6 @@
     $(document).ready(function() {
         // Ensure DataTables is loaded before initializing
         if (typeof $.fn.DataTable === 'undefined') {
-            console.error('DataTables library not loaded');
             return;
         }
         StatesAdmin.init();

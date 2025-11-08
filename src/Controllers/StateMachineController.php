@@ -128,23 +128,24 @@ class StateMachineController {
             $columns = ['id', 'name', 'slug', 'plugin_slug', 'entity_type', 'created_at'];
             $order_column = isset($columns[$order_column_index]) ? $columns[$order_column_index] : 'id';
 
+            // DISABLE CACHE FOR NOW - causing stuck spinner issues
             // Build cache key for DataTable response
-            $cache_key = sprintf(
-                'datatable_%d_%d_%s_%s_%s_%s',
-                $start,
-                $length,
-                $search,
-                $order_column,
-                $order_dir,
-                $workflow_group_id ?? 'all'
-            );
+            // $cache_key = sprintf(
+            //     'datatable_%d_%d_%s_%s_%s_%s',
+            //     $start,
+            //     $length,
+            //     $search,
+            //     $order_column,
+            //     $order_dir,
+            //     $workflow_group_id ?? 'all'
+            // );
 
             // Try to get from cache
-            $cached_result = $this->cache->get('state_machines_list', $cache_key);
-            if ($cached_result !== null) {
-                wp_send_json($cached_result);
-                return;
-            }
+            // $cached_result = $this->cache->get('state_machines_list', $cache_key);
+            // if ($cached_result !== null) {
+            //     wp_send_json($cached_result);
+            //     return;
+            // }
 
             // Get workflow group filter
             $workflow_group_id = isset($_POST['workflow_group_id']) && $_POST['workflow_group_id'] !== ''
@@ -189,8 +190,9 @@ class StateMachineController {
                 'data' => $formatted_data
             ];
 
+            // DISABLE CACHE - causing stuck spinner issues
             // Cache the result (5 minutes expiry for DataTable responses)
-            $this->cache->set('state_machines_list', $response, 300, $cache_key);
+            // $this->cache->set('state_machines_list', $response, 300, $cache_key);
 
             wp_send_json($response);
 

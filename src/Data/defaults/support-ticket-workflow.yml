@@ -1,0 +1,190 @@
+# Support Ticket Workflow
+# Comprehensive customer support ticket lifecycle management
+
+workflow_group:
+  name: "Customer Support"
+  slug: "customer-support"
+  description: "Workflows for managing customer support tickets and service requests"
+
+state_machine:
+  name: "Support Ticket Workflow"
+  slug: "support-ticket-workflow"
+  entity_type: "support_ticket"
+  description: "Complete workflow for customer support ticket management from creation to resolution"
+  plugin_slug: "wp-state-machine"
+
+states:
+  - name: "New"
+    slug: "new"
+    type: "initial"
+    description: "Ticket just created, not yet assigned"
+    color: "#17a2b8"
+
+  - name: "Assigned"
+    slug: "assigned"
+    type: "intermediate"
+    description: "Ticket assigned to support agent"
+    color: "#ffc107"
+
+  - name: "In Progress"
+    slug: "in-progress"
+    type: "intermediate"
+    description: "Agent is actively working on the ticket"
+    color: "#fd7e14"
+
+  - name: "Waiting for Customer"
+    slug: "waiting-customer"
+    type: "intermediate"
+    description: "Awaiting response or information from customer"
+    color: "#20c997"
+
+  - name: "Escalated"
+    slug: "escalated"
+    type: "intermediate"
+    description: "Ticket escalated to senior support or management"
+    color: "#dc3545"
+
+  - name: "Resolved"
+    slug: "resolved"
+    type: "intermediate"
+    description: "Issue resolved, awaiting customer confirmation"
+    color: "#28a745"
+
+  - name: "Closed"
+    slug: "closed"
+    type: "final"
+    description: "Ticket completed and archived"
+    color: "#6c757d"
+
+  - name: "Reopened"
+    slug: "reopened"
+    type: "intermediate"
+    description: "Closed ticket reopened by customer or agent"
+    color: "#e83e8c"
+
+transitions:
+  - name: "Assign to Agent"
+    slug: "assign-ticket"
+    from_state: "new"
+    to_state: "assigned"
+    description: "Assign ticket to a support agent"
+    conditions: []
+    actions:
+      - notify_assigned_agent
+      - notify_customer_assigned
+      - start_sla_timer
+
+  - name: "Start Working"
+    slug: "start-work"
+    from_state: "assigned"
+    to_state: "in-progress"
+    description: "Agent begins working on the ticket"
+    conditions: []
+    actions:
+      - log_start_time
+      - update_ticket_board
+
+  - name: "Request Customer Information"
+    slug: "request-info"
+    from_state: "in-progress"
+    to_state: "waiting-customer"
+    description: "Need additional information from customer"
+    conditions: []
+    actions:
+      - notify_customer_info_needed
+      - pause_sla_timer
+
+  - name: "Customer Responded"
+    slug: "customer-responded"
+    from_state: "waiting-customer"
+    to_state: "in-progress"
+    description: "Customer provided requested information"
+    conditions: []
+    actions:
+      - notify_assigned_agent
+      - resume_sla_timer
+
+  - name: "Escalate Ticket"
+    slug: "escalate"
+    from_state: "in-progress"
+    to_state: "escalated"
+    description: "Escalate to senior support or management"
+    conditions: []
+    actions:
+      - notify_escalation_team
+      - notify_customer_escalated
+      - update_priority_high
+
+  - name: "Resolve Ticket"
+    slug: "resolve-ticket"
+    from_state: "in-progress"
+    to_state: "resolved"
+    description: "Mark ticket as resolved"
+    conditions: []
+    actions:
+      - notify_customer_resolution
+      - request_satisfaction_survey
+      - stop_sla_timer
+
+  - name: "Resolve from Escalated"
+    slug: "resolve-from-escalated"
+    from_state: "escalated"
+    to_state: "resolved"
+    description: "Resolve escalated ticket"
+    conditions: []
+    actions:
+      - notify_customer_resolution
+      - stop_sla_timer
+
+  - name: "Close Resolved"
+    slug: "close-resolved"
+    from_state: "resolved"
+    to_state: "closed"
+    description: "Close resolved ticket (customer confirmed or auto-closed after timeout)"
+    conditions: []
+    actions:
+      - send_thank_you_email
+      - update_agent_metrics
+      - archive_ticket
+
+  - name: "Close Without Resolution"
+    slug: "close-unresolved"
+    from_state: "new"
+    to_state: "closed"
+    description: "Close ticket for spam, duplicate, or invalid issues"
+    conditions: []
+    actions:
+      - notify_customer_closure
+      - log_closure_reason
+
+  - name: "Reopen Ticket"
+    slug: "reopen-ticket"
+    from_state: "closed"
+    to_state: "reopened"
+    description: "Reopen a closed ticket"
+    conditions: []
+    actions:
+      - notify_support_team
+      - reassign_to_original_agent
+      - reset_sla_timer
+
+  - name: "Reassign Reopened"
+    slug: "reassign-reopened"
+    from_state: "reopened"
+    to_state: "assigned"
+    description: "Reassign reopened ticket"
+    conditions: []
+    actions:
+      - notify_new_agent
+      - notify_customer_reassigned
+
+  - name: "Reassign Ticket"
+    slug: "reassign"
+    from_state: "assigned"
+    to_state: "assigned"
+    description: "Reassign ticket to different agent"
+    conditions: []
+    actions:
+      - notify_old_agent
+      - notify_new_agent
+      - log_reassignment_reason

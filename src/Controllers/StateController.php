@@ -131,23 +131,24 @@ class StateController {
             $columns = ['id', 'name', 'slug', 'type', 'sort_order', 'created_at'];
             $order_column = isset($columns[$order_column_index]) ? $columns[$order_column_index] : 'sort_order';
 
+            // DISABLE CACHE FOR NOW - causing stuck spinner issues
             // Build cache key
-            $cache_key = sprintf(
-                'datatable_%d_%d_%d_%s_%s_%s',
-                $machine_id,
-                $start,
-                $length,
-                $search,
-                $order_column,
-                $order_dir
-            );
+            // $cache_key = sprintf(
+            //     'datatable_%d_%d_%d_%s_%s_%s',
+            //     $machine_id,
+            //     $start,
+            //     $length,
+            //     $search,
+            //     $order_column,
+            //     $order_dir
+            // );
 
             // Try to get from cache
-            $cached_result = $this->cache->get('states_list', $cache_key);
-            if ($cached_result !== null) {
-                wp_send_json($cached_result);
-                return;
-            }
+            // $cached_result = $this->cache->get('states_list', $cache_key);
+            // if ($cached_result !== null) {
+            //     wp_send_json($cached_result);
+            //     return;
+            // }
 
             // Get data from model
             $params = [
@@ -186,8 +187,9 @@ class StateController {
                 'data' => $formatted_data
             ];
 
+            // DISABLE CACHE - causing stuck spinner issues
             // Cache the result
-            $this->cache->set('states_list', $response, 300, $cache_key);
+            // $this->cache->set('states_list', $response, 300, $cache_key);
 
             wp_send_json($response);
 

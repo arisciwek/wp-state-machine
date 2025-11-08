@@ -1,0 +1,159 @@
+{
+    "timestamp": "2025-11-08 07:53:11",
+    "workflow_groups": [
+        {
+            "id": "1",
+            "name": "Blog Management",
+            "label": null,
+            "slug": "blog-management",
+            "description": "Content management workflows for blog posts, pages, and articles",
+            "icon": "dashicons-networking",
+            "sort_order": "0",
+            "is_active": "1",
+            "is_custom": "0",
+            "created_at": "2025-11-08 07:36:55",
+            "updated_at": "2025-11-08 07:36:55"
+        }
+    ],
+    "machines": [
+        {
+            "id": "4",
+            "workflow_group_id": "1",
+            "name": "Blog Post Workflow",
+            "slug": "blog-post-workflow",
+            "entity_type": "post",
+            "description": "Manage the lifecycle of blog posts from draft to published",
+            "plugin_slug": "wp-state-machine",
+            "is_active": "1",
+            "is_default": "1",
+            "is_custom": "0",
+            "created_by": "0",
+            "created_at": "2025-11-08 07:49:25",
+            "updated_at": "2025-11-08 07:49:25"
+        }
+    ],
+    "states": [
+        {
+            "id": "16",
+            "machine_id": "4",
+            "name": "Draft",
+            "slug": "draft",
+            "type": "initial",
+            "color": null,
+            "metadata": null,
+            "sort_order": "0",
+            "created_at": "2025-11-08 07:49:25",
+            "updated_at": "2025-11-08 07:49:25"
+        },
+        {
+            "id": "17",
+            "machine_id": "4",
+            "name": "Review",
+            "slug": "review",
+            "type": "normal",
+            "color": null,
+            "metadata": null,
+            "sort_order": "0",
+            "created_at": "2025-11-08 07:49:25",
+            "updated_at": "2025-11-08 07:49:25"
+        },
+        {
+            "id": "18",
+            "machine_id": "4",
+            "name": "Approved",
+            "slug": "approved",
+            "type": "normal",
+            "color": null,
+            "metadata": null,
+            "sort_order": "0",
+            "created_at": "2025-11-08 07:49:25",
+            "updated_at": "2025-11-08 07:49:25"
+        },
+        {
+            "id": "19",
+            "machine_id": "4",
+            "name": "Published",
+            "slug": "published",
+            "type": "final",
+            "color": null,
+            "metadata": null,
+            "sort_order": "0",
+            "created_at": "2025-11-08 07:49:25",
+            "updated_at": "2025-11-08 07:49:25"
+        },
+        {
+            "id": "20",
+            "machine_id": "4",
+            "name": "Archived",
+            "slug": "archived",
+            "type": "final",
+            "color": null,
+            "metadata": null,
+            "sort_order": "0",
+            "created_at": "2025-11-08 07:49:25",
+            "updated_at": "2025-11-08 07:49:25"
+        }
+    ],
+    "transitions": [
+        {
+            "id": "16",
+            "machine_id": "4",
+            "from_state_id": "16",
+            "to_state_id": "17",
+            "label": "Submit for Review",
+            "guard_class": null,
+            "metadata": "{\"conditions\":[],\"actions\":[\"notify_editor\"],\"description\":\"Submit draft for editorial review\"}",
+            "sort_order": "0",
+            "created_at": "2025-11-08 07:49:25",
+            "updated_at": "2025-11-08 07:49:25"
+        },
+        {
+            "id": "17",
+            "machine_id": "4",
+            "from_state_id": "17",
+            "to_state_id": "18",
+            "label": "Approve",
+            "guard_class": null,
+            "metadata": "{\"conditions\":[\"has_featured_image\",\"has_category\"],\"actions\":[\"notify_author\"],\"description\":\"Approve post for publication\"}",
+            "sort_order": "0",
+            "created_at": "2025-11-08 07:49:25",
+            "updated_at": "2025-11-08 07:49:25"
+        },
+        {
+            "id": "18",
+            "machine_id": "4",
+            "from_state_id": "17",
+            "to_state_id": "16",
+            "label": "Reject",
+            "guard_class": null,
+            "metadata": "{\"conditions\":[],\"actions\":[\"notify_author\",\"add_rejection_note\"],\"description\":\"Reject and send back to draft\"}",
+            "sort_order": "0",
+            "created_at": "2025-11-08 07:49:25",
+            "updated_at": "2025-11-08 07:49:25"
+        },
+        {
+            "id": "19",
+            "machine_id": "4",
+            "from_state_id": "18",
+            "to_state_id": "19",
+            "label": "Publish",
+            "guard_class": null,
+            "metadata": "{\"conditions\":[],\"actions\":[\"set_publish_date\",\"notify_subscribers\"],\"description\":\"Publish the post\"}",
+            "sort_order": "0",
+            "created_at": "2025-11-08 07:49:25",
+            "updated_at": "2025-11-08 07:49:25"
+        },
+        {
+            "id": "20",
+            "machine_id": "4",
+            "from_state_id": "19",
+            "to_state_id": "20",
+            "label": "Archive",
+            "guard_class": null,
+            "metadata": "{\"conditions\":[],\"actions\":[\"remove_from_homepage\"],\"description\":\"Archive published post\"}",
+            "sort_order": "0",
+            "created_at": "2025-11-08 07:49:25",
+            "updated_at": "2025-11-08 07:49:25"
+        }
+    ]
+}

@@ -131,28 +131,28 @@ class MenuManager {
             __('State Machines', 'wp-state-machine'),
             'view_state_machines',
             'wp-state-machine',
-            [$this, 'renderMainPage'],
+            [$this, 'renderGroupsPage'], // Default to Workflow Groups page
             'dashicons-networking',
             58
         );
 
-        // Submenu: Workflow Groups
+        // Submenu: Workflow Groups (first position - uses parent slug)
         add_submenu_page(
             'wp-state-machine',
             __('Workflow Groups', 'wp-state-machine'),
             __('Workflow Groups', 'wp-state-machine'),
             'view_state_machines',
-            'wp-state-machine-groups',
+            'wp-state-machine', // Same as parent slug to appear first
             [$this, 'renderGroupsPage']
         );
 
-        // Submenu: State Machines (rename default submenu)
+        // Submenu: State Machines
         add_submenu_page(
             'wp-state-machine',
             __('State Machines', 'wp-state-machine'),
             __('Machines', 'wp-state-machine'),
             'view_state_machines',
-            'wp-state-machine',
+            'wp-state-machine-machines', // Different slug for second position
             [$this, 'renderMainPage']
         );
 

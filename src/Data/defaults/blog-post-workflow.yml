@@ -1,0 +1,90 @@
+# Blog Post Workflow
+# Default workflow for managing blog post lifecycle
+
+workflow_group:
+  name: "Blog Management"
+  slug: "blog-management"
+  description: "Content management workflows for blog posts, pages, and articles"
+
+state_machine:
+  name: "Blog Post Workflow"
+  slug: "blog-post-workflow"
+  entity_type: "post"
+  description: "Manage the lifecycle of blog posts from draft to published"
+  plugin_slug: "wp-state-machine"
+
+states:
+  - name: "Draft"
+    slug: "draft"
+    type: "initial"
+    description: "Initial draft state for new posts"
+
+  - name: "Review"
+    slug: "review"
+    type: "intermediate"
+    description: "Post is under editorial review"
+
+  - name: "Approved"
+    slug: "approved"
+    type: "intermediate"
+    description: "Post has been approved for publishing"
+
+  - name: "Published"
+    slug: "published"
+    type: "final"
+    description: "Post is live and publicly visible"
+
+  - name: "Archived"
+    slug: "archived"
+    type: "final"
+    description: "Post has been archived"
+
+transitions:
+  - name: "Submit for Review"
+    slug: "submit-for-review"
+    from_state: "draft"
+    to_state: "review"
+    description: "Submit draft for editorial review"
+    conditions: []
+    actions:
+      - notify_editor
+
+  - name: "Approve"
+    slug: "approve"
+    from_state: "review"
+    to_state: "approved"
+    description: "Approve post for publication"
+    conditions:
+      - has_featured_image
+      - has_category
+    actions:
+      - notify_author
+
+  - name: "Reject"
+    slug: "reject"
+    from_state: "review"
+    to_state: "draft"
+    description: "Reject and send back to draft"
+    conditions: []
+    actions:
+      - notify_author
+      - add_rejection_note
+
+  - name: "Publish"
+    slug: "publish"
+    from_state: "approved"
+    to_state: "published"
+    description: "Publish the post"
+    conditions: []
+    actions:
+      - set_publish_date
+      - notify_subscribers
+
+  - name: "Archive"
+    slug: "archive"
+    from_state: "published"
+    to_state: "archived"
+    description: "Archive published post"
+    conditions: []
+    actions:
+      - remove_from_homepage

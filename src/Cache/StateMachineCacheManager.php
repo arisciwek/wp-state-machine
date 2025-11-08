@@ -142,14 +142,22 @@ class StateMachineCacheManager {
     /**
      * Generate valid cache key from components
      *
-     * @param string ...$components Key components
+     * @param mixed ...$components Key components (will be converted to strings)
      * @return string Generated cache key
      */
-    private function generateKey(string ...$components): string {
-        // Filter out empty components
-        $validComponents = array_filter($components, function($component) {
-            return !empty($component) && is_string($component);
-        });
+    private function generateKey(...$components): string {
+        // Convert all components to strings and filter out empty values
+        $validComponents = array_filter(
+            array_map(function($component) {
+                if (is_null($component)) {
+                    return '';
+                }
+                return (string) $component;
+            }, $components),
+            function($component) {
+                return !empty($component);
+            }
+        );
 
         if (empty($validComponents)) {
             // Generate default key from components hash

@@ -120,10 +120,20 @@ class WP_State_Machine_Dependencies {
         }
 
         // Machines page specific styles
-        if ($screen->id === 'toplevel_page_wp-state-machine') {
+        if ($screen->id === 'state-machines_page_wp-state-machine-machines') {
             wp_enqueue_style(
                 'wp-state-machine-machines',
                 WP_STATE_MACHINE_URL . 'assets/css/machines.css',
+                [],
+                $this->version
+            );
+        }
+
+        // Workflow Groups page specific styles (now uses parent slug)
+        if ($screen->id === 'toplevel_page_wp-state-machine') {
+            wp_enqueue_style(
+                'wp-state-machine-workflow-groups',
+                WP_STATE_MACHINE_URL . 'assets/css/workflow-groups.css',
                 [],
                 $this->version
             );
@@ -164,16 +174,6 @@ class WP_State_Machine_Dependencies {
             wp_enqueue_style(
                 'wp-state-machine-transition-logs',
                 WP_STATE_MACHINE_URL . 'assets/css/transition-logs.css',
-                [],
-                $this->version
-            );
-        }
-
-        // Workflow Groups page specific styles
-        if ($screen->id === 'state-machines_page_wp-state-machine-groups') {
-            wp_enqueue_style(
-                'wp-state-machine-workflow-groups',
-                WP_STATE_MACHINE_URL . 'assets/css/workflow-groups.css',
                 [],
                 $this->version
             );
@@ -241,8 +241,22 @@ class WP_State_Machine_Dependencies {
             $this->localize_settings_scripts();
         }
 
-        // Machines page specific scripts
+        // Workflow Groups page specific scripts (now uses parent slug - first position)
         if ($screen->id === 'toplevel_page_wp-state-machine') {
+            wp_enqueue_script(
+                'wp-state-machine-workflow-groups',
+                WP_STATE_MACHINE_URL . 'assets/js/workflow-groups.js',
+                ['jquery', 'datatables'],
+                $this->version,
+                true
+            );
+
+            // Localize script for workflow groups page
+            $this->localize_workflow_groups_scripts();
+        }
+
+        // Machines page specific scripts (now uses different slug)
+        if ($screen->id === 'state-machines_page_wp-state-machine-machines') {
             wp_enqueue_script(
                 'wp-state-machine-machines',
                 WP_STATE_MACHINE_URL . 'assets/js/machines.js',
@@ -304,28 +318,6 @@ class WP_State_Machine_Dependencies {
 
             // Localize script for logs page
             $this->localize_logs_scripts();
-        }
-
-        // Workflow Groups page specific scripts
-        if ($screen->id === 'state-machines_page_wp-state-machine-groups') {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Enqueuing workflow-groups.js for screen: ' . $screen->id);
-            }
-
-            wp_enqueue_script(
-                'wp-state-machine-workflow-groups',
-                WP_STATE_MACHINE_URL . 'assets/js/workflow-groups.js',
-                ['jquery', 'datatables'],
-                $this->version,
-                true
-            );
-
-            // Localize script for workflow groups page
-            $this->localize_workflow_groups_scripts();
-
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Workflow groups scripts enqueued successfully');
-            }
         }
     }
 

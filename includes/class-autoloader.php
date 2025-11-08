@@ -70,6 +70,12 @@ class WP_State_Machine_Autoloader {
      * @return void
      */
     public function register() {
+        // Load composer autoload if available
+        $composer_autoload = $this->baseDir . 'vendor/autoload.php';
+        if (file_exists($composer_autoload)) {
+            require_once $composer_autoload;
+        }
+
         spl_autoload_register([$this, 'loadClass']);
     }
 

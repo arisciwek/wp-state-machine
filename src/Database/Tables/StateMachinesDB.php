@@ -4,7 +4,7 @@
  *
  * @package     WP_State_Machine
  * @subpackage  Database/Tables
- * @version     1.1.0
+ * @version     1.2.0
  * @author      arisciwek
  *
  * Path: /wp-state-machine/src/Database/Tables/StateMachinesDB.php
@@ -22,6 +22,7 @@
  * - description    : Machine description (nullable)
  * - plugin_slug    : Plugin owner (e.g., "wp-rfq")
  * - is_active      : Active status
+ * - is_default     : 1=seeded from YML, 0=user created
  * - is_custom      : 0=default, 1=user modified
  * - created_by     : User ID who created
  * - created_at     : Timestamp pembuatan
@@ -36,10 +37,14 @@
  * - entity_type    : KEY untuk query by entity
  * - plugin_slug    : KEY untuk plugin isolation queries
  * - is_active      : KEY untuk filter active machines
+ * - is_default     : KEY untuk query default workflows
  * - is_custom      : KEY untuk tracking modifications
  * - created_by     : KEY untuk audit
  *
  * Changelog:
+ * 1.2.0 - 2025-11-08 (TODO-6106)
+ * - Added is_default flag for YML Seeder support
+ * - Added composite index for default/custom filtering
  * 1.1.0 - 2025-11-07
  * - Added plugin_slug field for plugin isolation
  * - Added group_id FK to workflow_groups
@@ -71,6 +76,7 @@ class StateMachinesDB {
             description text NULL,
             plugin_slug varchar(100) NULL,
             is_active tinyint(1) NOT NULL DEFAULT 1,
+            is_default tinyint(1) NOT NULL DEFAULT 0 COMMENT '1=seeded from YML, 0=user created',
             is_custom tinyint(1) NOT NULL DEFAULT 0,
             created_by bigint(20) UNSIGNED NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
@@ -81,7 +87,9 @@ class StateMachinesDB {
             KEY entity_type_index (entity_type),
             KEY plugin_slug_index (plugin_slug),
             KEY is_active_index (is_active),
+            KEY is_default_index (is_default),
             KEY is_custom_index (is_custom),
+            KEY default_custom_index (is_default, is_custom),
             KEY created_by_index (created_by)
         ) $charset_collate;";
     }
@@ -99,9 +107,9 @@ class StateMachinesDB {
 
         $constraints = [
             [
-                'name' => 'fk_machine_workflow_group',
+                'name' => 'fk_sm_machine_workflow_group',
                 'sql' => "ALTER TABLE {$table_name}
-                         ADD CONSTRAINT fk_machine_workflow_group
+                         ADD CONSTRAINT fk_sm_machine_workflow_group
                          FOREIGN KEY (workflow_group_id)
                          REFERENCES {$groups_table}(id)
                          ON DELETE SET NULL"

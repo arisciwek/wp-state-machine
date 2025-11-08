@@ -439,3 +439,196 @@ body.admin-color-light .sm-switch input:checked + .sm-slider,
 body.admin-color-light .sm-stat-card .stat-value {
     background-color: #04a4cc;
 }
+
+/* ========================================
+   Workflow Cards Grid
+   ======================================== */
+.workflows-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.workflow-card {
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.workflow-card:hover {
+    border-color: #2271b1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Card Header */
+.workflow-card-header {
+    background: linear-gradient(135deg, #2271b1 0%, #135e96 100%);
+    color: #fff;
+    padding: 15px;
+    position: relative;
+}
+
+.workflow-card-header h4 {
+    margin: 0 0 5px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.workflow-card-header .workflow-slug {
+    font-size: 12px;
+    opacity: 0.8;
+    font-family: monospace;
+}
+
+/* Status Badge */
+.workflow-status-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.workflow-status-badge.seeded {
+    background: rgba(0, 163, 42, 0.2);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.workflow-status-badge.not-seeded {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Card Body */
+.workflow-card-body {
+    padding: 15px;
+}
+
+.workflow-card-body .description {
+    color: #646970;
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 15px;
+}
+
+/* Stats Grid */
+.workflow-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.workflow-stat {
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    padding: 10px;
+    text-align: center;
+}
+
+.workflow-stat .stat-label {
+    display: block;
+    font-size: 11px;
+    color: #646970;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+}
+
+.workflow-stat .stat-value {
+    display: block;
+    font-size: 20px;
+    font-weight: 600;
+    color: #2271b1;
+}
+
+/* Card Footer */
+.workflow-card-footer {
+    padding: 0 15px 15px 15px;
+}
+
+.workflow-card-footer .button {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+}
+
+.workflow-card-footer .button.seed-workflow {
+    background: #2271b1;
+    color: #fff;
+    border-color: #2271b1;
+}
+
+.workflow-card-footer .button.seed-workflow:hover {
+    background: #135e96;
+    border-color: #135e96;
+}
+
+.workflow-card-footer .button.reset-workflow {
+    background: #d63638;
+    color: #fff;
+    border-color: #d63638;
+    margin-top: 8px;
+}
+
+.workflow-card-footer .button.reset-workflow:hover {
+    background: #b32d2e;
+    border-color: #b32d2e;
+}
+
+.workflow-card-footer .button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Loading State for Cards */
+.workflow-card.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.workflow-card.loading .workflow-card-header {
+    background: #646970;
+}
+
+/* Empty State */
+.workflows-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #646970;
+}
+
+.workflows-empty .dashicons {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    opacity: 0.3;
+    margin-bottom: 10px;
+}
+
+.workflows-empty p {
+    margin: 10px 0;
+    font-size: 14px;
+}
+
+/* Responsive Design for Workflow Cards */
+@media screen and (max-width: 782px) {
+    .workflows-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .workflow-stats {
+        grid-template-columns: 1fr;
+    }
+}

@@ -68,6 +68,10 @@ class SettingsController {
         'auto_cleanup_enabled' => false,
         'cleanup_frequency' => 'monthly',
         'keep_logs_days' => 90,
+
+        // Development settings
+        'enable_development' => false,
+        'clear_data_on_deactivate' => false,
     ];
 
     /**
@@ -301,6 +305,10 @@ class SettingsController {
         $current['cleanup_frequency'] = isset($new_data['cleanup_frequency']) ? sanitize_text_field($new_data['cleanup_frequency']) : 'monthly';
         $current['keep_logs_days'] = isset($new_data['keep_logs_days']) ? absint($new_data['keep_logs_days']) : 90;
 
+        // Development settings
+        $current['enable_development'] = isset($new_data['enable_development']) ? (bool) $new_data['enable_development'] : false;
+        $current['clear_data_on_deactivate'] = isset($new_data['clear_data_on_deactivate']) ? (bool) $new_data['clear_data_on_deactivate'] : false;
+
         return $current;
     }
 
@@ -314,7 +322,7 @@ class SettingsController {
         $sanitized = [];
 
         // Boolean fields
-        $boolean_fields = ['enable_logging', 'enable_notifications', 'enable_cache', 'allow_plugin_manage_permissions', 'auto_cleanup_enabled'];
+        $boolean_fields = ['enable_logging', 'enable_notifications', 'enable_cache', 'allow_plugin_manage_permissions', 'auto_cleanup_enabled', 'enable_development', 'clear_data_on_deactivate'];
         foreach ($boolean_fields as $field) {
             $sanitized[$field] = isset($settings[$field]) ? (bool) $settings[$field] : false;
         }

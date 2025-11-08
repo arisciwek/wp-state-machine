@@ -40,6 +40,11 @@
         currentWorkflowGroupId: '',
 
         /**
+         * Prevent double-click on filter
+         */
+        isFiltering: false,
+
+        /**
          * Localized data from PHP
          */
         data: wpStateMachineMachinesData,
@@ -73,6 +78,21 @@
                         d.action = 'handle_state_machine_datatable';
                         d.nonce = self.data.nonce;
                         d.workflow_group_id = self.currentWorkflowGroupId;
+                        d._cache_bust = Date.now(); // Prevent caching issues
+                    },
+                    error: function(xhr, error, code) {
+                        // Force hide processing indicator
+                        $('.dataTables_processing').hide();
+                        // Reset filtering state
+                        self.isFiltering = false;
+                        $('#btn-filter').prop('disabled', false).removeClass('loading');
+                    },
+                    dataSrc: function(json) {
+                        // Ensure data is valid
+                        if (!json || !json.data) {
+                            return [];
+                        }
+                        return json.data;
                     }
                 },
                 columns: [
@@ -108,9 +128,43 @@
             const self = this;
 
             // Filter button
-            $('#btn-filter').on('click', function() {
-                self.currentWorkflowGroupId = $('#filter-workflow-group').val();
-                self.table.ajax.reload();
+            $('#btn-filter').on('click', function(e) {
+                e.preventDefault();
+
+                // Prevent double-click
+                if (self.isFiltering) {
+                    return;
+                }
+
+                const selectedGroup = $('#filter-workflow-group').val();
+
+                // Update current workflow group ID (empty string for "Show All")
+                self.currentWorkflowGroupId = selectedGroup || '';
+                self.isFiltering = true;
+
+                // Disable button during filtering
+                $(this).prop('disabled', true).addClass('loading');
+
+                // Timeout fallback (in case request hangs)
+                const timeoutId = setTimeout(function() {
+                    self.isFiltering = false;
+                    $('#btn-filter').prop('disabled', false).removeClass('loading');
+                    $('.dataTables_processing').hide();
+                }, 10000); // 10 second timeout
+
+                // Force reload with callbacks to ensure spinner stops
+                if (self.table && self.table.ajax) {
+                    self.table.ajax.reload(function(json) {
+                        // Success callback
+                        clearTimeout(timeoutId);
+                        self.isFiltering = false;
+                        $('#btn-filter').prop('disabled', false).removeClass('loading');
+                    }, false); // false = don't reset paging
+                } else {
+                    clearTimeout(timeoutId);
+                    self.isFiltering = false;
+                    $('#btn-filter').prop('disabled', false).removeClass('loading');
+                }
             });
 
             // Add new machine
@@ -208,7 +262,6 @@
 
             $.post(self.data.ajaxUrl, formData)
                 .done(function(response) {
-                    console.log('Save response:', response);
                     if (response.success) {
                         // Close modal
                         $('#machine-modal').fadeOut(200);
@@ -227,8 +280,7 @@
                     }
                 })
                 .fail(function(xhr, status, error) {
-                    console.error('AJAX Error:', status, error, xhr.responseText);
-                    alert('An error occurred while saving. Please check console for details.');
+                    alert('An error occurred while saving. Please try again.');
                 });
         },
 
@@ -318,7 +370,6 @@
     $(document).ready(function() {
         // Ensure DataTables is loaded before initializing
         if (typeof $.fn.DataTable === 'undefined') {
-            console.error('DataTables library not loaded');
             return;
         }
         MachinesAdmin.init();
